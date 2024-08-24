@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "allowJs": true,
+        "jsx": "react",
+        "skipLibCheck": true,
+        "strictNullChecks": true,
+        "strict": true,
+        "noEmitOnError": true,
+        "noImplicitReturns": true,
+        "noImplicitAny": false,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "lib": ["esnext", "dom"],
+        "target": "es2018",
+        "outDir": "dist/",
+        "declarationMap": true,
+        "composite": true
+    }
+}

@@ -1,0 +1,11 @@
+lerna.json
+coverage
+dist
+node_modules
+support/docs/docs/static/data/
+support/docs/static/
+support/tools/temp/
+support/design/foundations/figma-tokens.json
+design-tokens.json
+
+/.nx/workspace-data

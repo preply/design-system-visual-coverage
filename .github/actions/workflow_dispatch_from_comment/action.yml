@@ -1,0 +1,29 @@
+name: 'Workflow dispatch from comment'
+description: 'Dispatch a workflow from a comment'
+
+inputs:
+  workflow:
+    description: 'Workflow to dispatch'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: React on comment
+      uses: peter-evans/create-or-update-comment@v4
+      with:
+        comment-id: ${{ github.event.comment.id }}
+        reactions: '+1'
+    - name: Get branch ref
+      id: 'get_branch'
+      shell: bash
+      run: echo ::set-output name=branch::$(gh pr view $PR_NO --repo $REPO --json headRefName --jq '.headRefName')
+      env:
+        REPO: ${{ github.repository }}
+        PR_NO: ${{ github.event.issue.number }}
+        GH_TOKEN: ${{ github.token }}
+    - name: Dispatch workflow
+      shell: bash
+      run: gh workflow run ${{ inputs.workflow }} --ref ${{ steps.get_branch.outputs.branch }}
+      env:
+        GH_TOKEN: ${{ github.token }}

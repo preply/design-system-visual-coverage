@@ -1,0 +1,52 @@
+{
+    "name": "@preply/ds-web-lib",
+    "version": "0.99.0",
+    "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
+    "main": "dist/index.js",
+    "files": [
+        "dist/"
+    ],
+    "sideEffects": [
+        "**/*.css"
+    ],
+    "browserslist": "last 2 versions",
+    "scripts": {
+        "test": "echo \"Tests have been removed\" && exit 0"
+    },
+    "dependencies": {
+        "@preply/ds-core": "0.99.0",
+        "@preply/ds-media-icons": "0.99.0",
+        "@preply/ds-visual-coverage-component-names": "0.99.0",
+        "@preply/ds-web-core": "0.99.0",
+        "@preply/ds-web-root": "0.99.0",
+        "react-is": "^18.2.0"
+    },
+    "peerDependencies": {
+        "@preply/ds-core": "0.99.0",
+        "@preply/ds-media-icons": "0.99.0",
+        "@preply/ds-visual-coverage-component-names": "0.99.0",
+        "@preply/ds-web-core": "0.99.0",
+        "@preply/ds-web-root": "0.99.0",
+        "react": "^16 || ^18",
+        "react-dom": "^16 || ^18"
+    },
+    "devDependencies": {
+        "@preply/ds-docs-toolkit": "0.99.0",
+        "@preply/ds-theme-base-ui": "0.99.0",
+        "@storybook/react": "8.2.9",
+        "@testing-library/react": "16.0.0",
+        "@types/react-is": "^18.2.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "jsdom-testing-mocks": "^1.7.0",
+        "storybook-addon-code-editor": "^3.1.0",
+        "typescript": "^4.9.5",
+        "vite": "5.4.0",
+        "vite-plugin-dts": "^4.0.3",
+        "vite-plugin-lib-inject-css": "^2.1.1",
+        "vite-plugin-svgr": "4.2.0"
+    },
+    "gitHead": "43a57736ab7534349a8a7224e2ae426110af95cc"
+}

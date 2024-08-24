@@ -1,0 +1,10 @@
+{
+    "extends": "../../config/tsconfig.build.json",
+    "compilerOptions": {
+        "rootDir": "src",
+        "noUncheckedIndexedAccess": true,
+        "exactOptionalPropertyTypes": true
+    },
+    "include": ["typings", "src"],
+    "exclude": ["node_modules", "dist", "**/docs", "**/*.test.*"]
+}

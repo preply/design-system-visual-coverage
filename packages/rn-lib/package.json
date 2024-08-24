@@ -1,0 +1,26 @@
+{
+    "name": "@preply/ds-rn-lib",
+    "version": "0.99.0",
+    "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
+    "main": "dist/index.js",
+    "files": [
+        "dist/"
+    ],
+    "sideEffects": false,
+    "scripts": {
+        "test": "echo \"Tests have been removed\" && exit 0"
+    },
+    "dependencies": {
+        "@preply/ds-visual-coverage-component-names": "0.99.0",
+        "@preply/ds-visual-coverage-rn": "0.99.0"
+    },
+    "peerDependencies": {
+        "@preply/ds-visual-coverage-component-names": "0.99.0",
+        "@preply/ds-visual-coverage-rn": "0.99.0",
+        "react": "^16 || ^18",
+        "react-native": "^0.73.7"
+    }
+}

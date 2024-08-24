@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    versioning-strategy: increase
+    schedule:
+      interval: daily
+    pull-request-branch-name:
+      separator: "-"
+    reviewers:
+      - preply/design_system
+    allow:
+      - dependency-type: direct
+    ignore:
+      # @preply/ds-* package versions are managed by lerna
+      - dependency-name: "@preply/ds-*"
+      # Handle React and React Native dependencies manually
+      - dependency-name: react
+      - dependency-name: "@types/react"
+      - dependency-name: react-dom
+      - dependency-name: "@types/react-dom"
+      - dependency-name: react-native
+      - dependency-name: "@types/react-native"
+      - dependency-name: react-native-web
+      - dependency-name: metro-react-native-babel-preset
+    groups:
+      minor-and-patch:
+        # Exclude packages that doesn't follow semver
+        exclude-patterns:
+          - "@react-native-masked-view/masked-view"
+          - eslint-plugin-vitest
+          - rollup-plugin-typescript2
+        update-types:
+        - minor
+        - patch
