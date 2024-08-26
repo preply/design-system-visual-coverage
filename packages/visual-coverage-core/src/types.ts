@@ -39,20 +39,16 @@ export type Bitmap = Uint8Array;
 
 export type EmptyPixel = 0;
 export type NonDsComponentPixel = 1;
-export type DsComponentPixels = 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type DsComponentPixels = 2 | 3 | 4;
 export type ComponentPixels = NonDsComponentPixel | DsComponentPixels;
 export type Pixel = EmptyPixel | ComponentPixels;
-export type HighestNumber = 8;
+export type HighestNumber = 4;
 
 export type ComponentType =
     | 'nonDsComponent' // A component that does not belong to the DS
     | 'uiDsComponent' // A DS component that doesn't have any children
-    | 'utilDsComponent' // A DS component used for JS purposes (ex. intersection observers. etc.)
-    | 'rebrandComponent' // A component introduced during the rebrand for Web
     | 'layoutDsComponent' // A DS container component (ex. FlexLayout, GridLayout, Box, etc.)
-    | 'unknownDsComponent' // A DS component that is not recognized
-    | 'dsCandidateComponent' // An App component still in the App dsCandidates directory
-    | 'outdatedDsComponent'; // A DS component marked as outdated
+    | 'unknownDsComponent'; // A DS component that is not recognized
 
 export type PixelType = 'emptyPixel' | ComponentType;
 

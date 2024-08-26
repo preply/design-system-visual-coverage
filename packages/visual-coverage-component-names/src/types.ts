@@ -1,9 +1,4 @@
-import {
-    appComponentNames,
-    dsCandidateComponentNames,
-    rebrandComponentNames,
-    webComponentNames,
-} from './componentNames';
+import { appComponentNames, webComponentNames } from './componentNames';
 
 type WebComponentNamesRecord = typeof webComponentNames;
 export type WebComponentNames = WebComponentNamesRecord[keyof WebComponentNamesRecord];
@@ -11,15 +6,4 @@ export type WebComponentNames = WebComponentNamesRecord[keyof WebComponentNamesR
 type AppComponentNamesRecord = typeof appComponentNames;
 export type AppComponentNames = AppComponentNamesRecord[keyof AppComponentNamesRecord];
 
-type RebrandComponentNamesRecord = typeof rebrandComponentNames;
-export type RebrandComponentNames = RebrandComponentNamesRecord[keyof RebrandComponentNamesRecord];
-
-type DsCandidateComponentNamesRecord = typeof dsCandidateComponentNames;
-export type DsCandidateComponentNames =
-    DsCandidateComponentNamesRecord[keyof DsCandidateComponentNamesRecord];
-
-export type ComponentNames =
-    | WebComponentNames
-    | AppComponentNames
-    | RebrandComponentNames
-    | DsCandidateComponentNames;
+export type ComponentNames = WebComponentNames | AppComponentNames;

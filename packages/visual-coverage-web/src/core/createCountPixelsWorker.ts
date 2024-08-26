@@ -57,7 +57,7 @@ export function createCountPixelsWorker(): Worker {
             // --------------------------------------------------
 
             function createPixelCounts(): PixelCounts {
-                const length: HighestNumber = 8;
+                const length: HighestNumber = 4;
                 const pixelCounts = new Uint32Array(length + 1);
 
                 return pixelCounts;
@@ -114,11 +114,7 @@ export function createCountPixelsWorker(): Worker {
 
                 // DS components
                 3: '🟩',
-                4: '🟪',
-                5: '🟩',
-                6: '🟩',
-                7: '🟩',
-                8: '🟪',
+                4: '🟩',
             };
 
             function getReadableBitmap(params: {
@@ -161,12 +157,8 @@ export function createCountPixelsWorker(): Worker {
             const pixelByComponentType: Record<ComponentType, Pixel> = {
                 nonDsComponent: 1,
                 uiDsComponent: 2,
-                utilDsComponent: 3,
-                rebrandComponent: 4,
-                layoutDsComponent: 5,
-                unknownDsComponent: 6,
-                outdatedDsComponent: 7,
-                dsCandidateComponent: 8,
+                layoutDsComponent: 3,
+                unknownDsComponent: 4,
             };
 
             // --------------------------------------------------

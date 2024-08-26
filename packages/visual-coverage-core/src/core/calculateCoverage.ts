@@ -15,14 +15,6 @@ export function calculateCoverage({ pixelCounts }: Params): Coverage {
         pixelCounts,
         componentType: 'uiDsComponent',
     });
-    const utilDsComponentPixels = getPixelCountByComponentType({
-        pixelCounts,
-        componentType: 'utilDsComponent',
-    });
-    const rebrandComponentPixels = getPixelCountByComponentType({
-        pixelCounts,
-        componentType: 'rebrandComponent',
-    });
     const layoutDsComponentPixels = getPixelCountByComponentType({
         pixelCounts,
         componentType: 'layoutDsComponent',
@@ -31,23 +23,8 @@ export function calculateCoverage({ pixelCounts }: Params): Coverage {
         pixelCounts,
         componentType: 'unknownDsComponent',
     });
-    const outdatedDsComponentPixels = getPixelCountByComponentType({
-        pixelCounts,
-        componentType: 'outdatedDsComponent',
-    });
-    const dsCandidateComponentPixels = getPixelCountByComponentType({
-        pixelCounts,
-        componentType: 'dsCandidateComponent',
-    });
-
     const dsComponentPixels =
-        uiDsComponentPixels +
-        layoutDsComponentPixels +
-        utilDsComponentPixels +
-        unknownDsComponentPixels +
-        outdatedDsComponentPixels +
-        rebrandComponentPixels +
-        dsCandidateComponentPixels;
+        uiDsComponentPixels + layoutDsComponentPixels + unknownDsComponentPixels;
 
     const coverage = (dsComponentPixels / (dsComponentPixels + nonDsComponentPixels)) * 100;
 

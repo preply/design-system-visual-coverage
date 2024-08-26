@@ -1,8 +1,4 @@
-import type {
-    AppComponentNames,
-    ComponentNames,
-    DsCandidateComponentNames,
-} from '@preply/ds-visual-coverage-component-names';
+import type { AppComponentNames, ComponentNames } from '@preply/ds-visual-coverage-component-names';
 import type { CoverageContainer, DsVisualCoverageRunResult } from '@preply/ds-visual-coverage-core';
 
 import type { coverageTestIdSeparator } from './hooks/getCoverageTestId';
@@ -29,9 +25,7 @@ type RnTestId = string | EmptyString;
 
 export type CoverageContainerTestIdSuffix =
     `${CoverageContainerTestIdSeparator}${StringifiedCoverageContainer}`;
-type DsComponentTestIdSuffix = `${DsComponentTestIdSeparator}${
-    | AppComponentNames
-    | DsCandidateComponentNames}`;
+type DsComponentTestIdSuffix = `${DsComponentTestIdSeparator}${AppComponentNames}`;
 
 export type AccessibilityIdentifier = RnTestId | CoverageTestId;
 

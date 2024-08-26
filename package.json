@@ -14,11 +14,12 @@
         "yarn": "3"
     },
     "scripts": {
-        "dev": "run build:partials && lerna run dev --parallel --ignore @preply/ds-docs",
+        "dev": "lerna run dev --parallel --ignore @preply/ds-docs",
         "test": "lerna run test --parallel --no-bail",
         "lint": "run lint:json && eslint --report-unused-disable-directives .",
         "clean": "lerna run clean --parallel --stream --no-bail",
-        "build": "run clean && run build:partials && run build:docs"
+        "build": "run clean && run build:packages",
+        "build:packages": "lerna run build --stream"
     },
     "devDependencies": {
         "@babel/core": "7.25.2",

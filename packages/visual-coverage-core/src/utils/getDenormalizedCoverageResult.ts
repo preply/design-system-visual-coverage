@@ -26,12 +26,8 @@ export function getDenormalizedCoverageResult(params: Params): DsVisualCoverageD
         emptyPixel: pixelCounts[defaultPixelByPixelType.emptyPixel] ?? 0,
         nonDsComponent: pixelCounts[defaultPixelByPixelType.nonDsComponent] ?? 0,
         uiDsComponent: pixelCounts[defaultPixelByPixelType.uiDsComponent] ?? 0,
-        utilDsComponent: pixelCounts[defaultPixelByPixelType.utilDsComponent] ?? 0,
-        rebrandComponent: pixelCounts[defaultPixelByPixelType.rebrandComponent] ?? 0,
         layoutDsComponent: pixelCounts[defaultPixelByPixelType.layoutDsComponent] ?? 0,
         unknownDsComponent: pixelCounts[defaultPixelByPixelType.unknownDsComponent] ?? 0,
-        outdatedDsComponent: pixelCounts[defaultPixelByPixelType.outdatedDsComponent] ?? 0,
-        dsCandidateComponent: pixelCounts[defaultPixelByPixelType.dsCandidateComponent] ?? 0,
     };
 
     const coverage = calculateCoverage({ pixelCounts });
