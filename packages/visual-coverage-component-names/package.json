@@ -1,0 +1,21 @@
+{
+    "name": "@preply/ds-visual-coverage-component-names",
+    "version": "0.99.0",
+    "type": "module",
+    "publishConfig": {
+        "access": "public"
+    },
+    "main": "dist/index.js",
+    "files": [
+        "dist/"
+    ],
+    "sideEffects": false,
+    "browserslist": "last 2 versions",
+    "scripts": {
+        "clean": "rm -rf dist",
+        "build": "NODE_ENV=production && run build:rollup",
+        "build:rollup": "run --top-level rollup -c rollup.config.cjs",
+        "dev": "run build:rollup -w"
+    },
+    "gitHead": "43a57736ab7534349a8a7224e2ae426110af95cc"
+}

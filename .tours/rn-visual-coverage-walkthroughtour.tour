@@ -1,0 +1,86 @@
+{
+    "$schema": "https://aka.ms/codetour-schema",
+    "title": "React Native visual coverage walkthrough",
+    "steps": [
+        {
+            "file": "packages/visual-coverage-rn/src/contextProviders/CoverageSetupProvider.tsx",
+            "description": "As a prerequisite, the app must wrap the whole component tree with `<CoverageSetupProvider>` (RootProvider also automatically embeds it). The visual coverage is not meant to be used in production, but only in a dedicated CI step. By default, it's disabled.",
+            "line": 30
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/hooks/useCoverageContainerTestId.tsx",
+            "description": "All the app views must use `useCoverageContainerTestId` to embed the container attributes inside the testId (which is later on converted to the iOS native `accessibilityIdentifier` and allow to recognize DS coverage container and DS components). Ideally, `accessibilityIdentifier` is also used for the components that belong to different teams.\nThis is necessary because there are few props (only the accessibility labels, essentially) we can leverage from React Native to leave traces (and embed data) readable by Swift.\n\nPlease note that `accessibilityIdentifier` simply returns the passed testID if the visual coverage is disabled.",
+            "line": 32
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/createCalculateDsVisualCoverages.ts",
+            "description": "The App must create a calculate DS visual coverage instance.",
+            "line": 34
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/coverageContainer/getCoverageContainersData.ts",
+            "description": "All the Swift views which contains the coverage container data in their `accessibilityIdentifier` are retrieved from the logged hierarchy tree.\n\nPlease note the App is expected to provide the logs, the DS coveragfe utilities do not provide this functionalitty.",
+            "line": 32
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/types.ts",
+            "description": "Here you can see all the data the App must autonomously provide to the DS visual coverage utilities.",
+            "line": 56
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/calculateDsVisualCoverages.ts",
+            "description": "For every coverage container, run the coverage calculation.",
+            "line": 63
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/calculateDsVisualCoverage.ts",
+            "description": "The first step is to traverse the coverage container's children to find the DS and non-DS components.",
+            "line": 50
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/core/loopOverContainerChildren.ts",
+            "description": "Also DS components are recognized through the `accessibilityIdentifier`.",
+            "line": 47
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/calculateDsVisualCoverage.ts",
+            "description": "With some heuristics, we need to filter out a lot of empty/intermediary Swift views that correspond to a single React Native view. Look at [this view hierarchy screenshot](@preply/ds-visual-coverage-rn/assets/swift-intermediary-layers.png) to better understand how many empty view there are from a Swift perspective.",
+            "line": 56
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/core/loopOverContainerChildren.ts",
+            "description": "Please note that the children traversal for a given coverage container stops (in terms of children depth) as soon as another coverage container is encountered.",
+            "line": 42
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/core/loopOverContainerChildren.ts",
+            "description": "Different components are classified of different types. Ui components (buttons, input fields, etc.) are component whose content is considered 100% from the Design System, while layout components are Design System components that could contain non-DS components.",
+            "line": 48
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/core/loopOverContainerChildren.ts",
+            "description": "Since the whole children tree is traversed, the type of the component is forced when they appear as descendants of DS ui components.",
+            "line": 52
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/calculateDsVisualCoverage.ts",
+            "description": "Once all the view's coordinates for the given coverage container are retrieved, it's time to count the rectangles' pixels.",
+            "line": 68
+        },
+        {
+            "file": "packages/visual-coverage-core/src/core/countPixels.ts",
+            "description": "The \"bitmap\" is a mono-dimensional array that contains as many items as the coverage container pixels.\n\nTo visualize it: think of a page like the following, where we highlight outline by coloring the borders of views\n```\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥⬛️🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩⬛️🟥\n🟥⬛️🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩🟩🟩🟩🟩⬛️🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩⬛️⬛️⬛️🟩⬛️🟩⬛️⬛️⬛️🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩🟩🟩🟩🟩⬛️🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n```\nin the \"bitmap\", we would have a number for every single item, like\n```js\n[\n      0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  -,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,\n  0,-,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,-,0,\n  0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,1,-,-,-,1,-,1,-,-,-,1,-,0,\n  0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,\n]\n```\nbut since it's a monodimensioal array, in reality it is\n```js\n[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,0,-,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,-,0,0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,0,-,-,-,-,-,-,1,-,-,-,1,-,1,-,-,-,1,-,0,0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,]\n```",
+            "line": 48
+        },
+        {
+            "file": "packages/visual-coverage-core/src/core/countPixels.ts",
+            "description": "All following, long code, \"paints\" the bitmap by settings all the pixels corresponding to the views perimeters. The views are weighted (some elements count more than other ones) so the perimeters are not just a 1-pixel border, but they are as large as the element weights.",
+            "line": 53
+        },
+        {
+            "file": "packages/visual-coverage-rn/src/calculateDsVisualCoverages.ts",
+            "description": "The visual coverage calculation is over.",
+            "line": 102
+        }
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "extends": "./config/tsconfig.base.json",
+    "compilerOptions": {
+        "module": "ES2020",
+        "moduleResolution": "node",
+        "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
+    }
+}

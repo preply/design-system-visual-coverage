@@ -1,0 +1,101 @@
+{
+    "$schema": "https://aka.ms/codetour-schema",
+    "title": "Web visual coverage walkthrough",
+    "steps": [
+        {
+            "file": "packages/visual-coverage-web/src/coverageContainer/getCoverageContainerAttributes.ts",
+            "description": "As a prerequisite, the web app must already have set the coverage container attribute somewhere in tha page. Ideally, the HTML attributes are set to the top container, and eventually also for the components that belong to different teams.\n\nFor instance:\n```html\n<body data-preply-ds-coverage=\"{'team':'teamA','component':'home'}\">\n    <!-- ... -->\n</body>\n```",
+            "line": 22
+        },
+        {
+            "file": "packages/visual-coverage-web/src/createCalculateDsVisualCoverages.ts",
+            "description": "The web app must create a Calculate DS visual coverage instance.",
+            "line": 36
+        },
+        {
+            "file": "packages/visual-coverage-web/src/coverageContainer/getCoverageContainersData.ts",
+            "description": "All the DOM elements with the coverage container HTML attribute are retrieved from the page.",
+            "line": 32
+        },
+        {
+            "file": "packages/visual-coverage-web/src/calculateDsVisualCoverages.ts",
+            "description": "For every coverage container, run the coverage calculation.",
+            "line": 112
+        },
+        {
+            "file": "packages/visual-coverage-web/src/calculateDsVisualCoverage.ts",
+            "description": "The first step is to traverse the coverage container's children to find the DS and non-DS components.",
+            "line": 53
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Traversing the DOM is a non-blocking, resumable, operation. As a result, it can be stopped at any given moment.",
+            "line": 288
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "For instance, when the users navigate to as different page.",
+            "line": 275
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Or when the users click (the assumption is that when users click something they change the content of the page like showing a modal, opening an accordion, etc. and so the coverage count is not valid anymore)",
+            "line": 276
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Or if the DOM traversal is stuck.",
+            "line": 273
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "At this point, the resumable DOM traversal starts.",
+            "line": 48
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Please note that the children traversal for a given coverage container stops (in terms of children depth) as soon as another coverage container is encountered.",
+            "line": 127
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Different components are classified of different types. Ui components (buttons, input fields, etc.) are component whose content is considered 100% from the Design System, while layout components are Design System components that could contain non-DS components.",
+            "line": 139
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "Since the whole children tree is traversed, the type of the component is forced when they appear as descendants of DS ui components.",
+            "line": 156
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/loopOverDomChildren.ts",
+            "description": "The most important data of a DOM element is its type, and coordinates.",
+            "line": 143
+        },
+        {
+            "file": "packages/visual-coverage-web/src/calculateDsVisualCoverage.ts",
+            "description": "Once all the DOM elements coordinates for the given coverage container are retrieved, it's time to count the rectangles' pixels.",
+            "line": 87
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/createCountPixelsWorker.ts",
+            "description": "The pixels are counted in a Web Worker to make it non-blocking but be a plain synchronous script (sync code is way more readable than async code).",
+            "line": 437
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/createCountPixelsWorker.ts",
+            "description": "The \"bitmap\" is a mono-dimensional array that contains as many items as the coverage container pixels.\n\nTo visualize it: think of a page like the following, where we highlight outline by coloring the CSS borders of DOM elements\n```\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥⬛️🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩⬛️🟥\n🟥⬛️🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩🟩🟩🟩🟩⬛️🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩⬛️⬛️⬛️🟩⬛️🟩⬛️⬛️⬛️🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️🟩🟩🟩🟩🟩⬛️🟩🟩🟩🟩🟩⬛️🟥\n🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥\n🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟩\n🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩\n```\nin the \"bitmap\", we would have a number for every single item, like\n```js\n[\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  -,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,\n  0,-,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,-,0,\n  0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,1,-,-,-,1,-,1,-,-,-,1,-,0,\n  0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,\n  0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,\n  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,\n  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,\n  1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,\n]\n```\nbut since it's a monodimensioal array, in reality it is\n```js\n[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,0,-,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,-,0,0,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,0,-,-,-,-,-,-,1,-,-,-,1,-,1,-,-,-,1,-,0,0,-,-,-,-,-,-,1,1,1,1,1,-,1,1,1,1,1,-,0,0,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,-,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,]\n```",
+            "line": 177
+        },
+        {
+            "file": "packages/visual-coverage-web/src/core/createCountPixelsWorker.ts",
+            "description": "All following, long code, \"paints\" the bitmap by settings all the pixels corresponding to the DOM elements perimeters. The DOM elements are weighted (some elements count more than other ones) so the perimeters are not just a 1-pixel border, but they are as large as the element weights.",
+            "line": 183
+        },
+        {
+            "file": "packages/visual-coverage-web/src/calculateDsVisualCoverages.ts",
+            "description": "The visual coverage calculation is over.",
+            "line": 139
+        }
+    ]
+}
