@@ -8,6 +8,9 @@
 
 # Preply Design System Visual Coverage
 
+> [!IMPORTANT]  
+> By mid April 2025, we will update this repository with a big refactor that makes adopting the library way easier.
+
 This repository contains the implementation of Preply's design system Visual Coverage (React and React Native), that's how Preply measure the impact of the Design System from the customers' perspective. If you haven't done it before, please read the [Visual coverage: Why and How Preply Measures the Impact of the Design System](https://medium.com/preply-engineering/visual-coverage-why-and-how-preply-measures-the-impact-of-the-design-system-1057115f4aff) article about the topic to know the why's behind it, and [The Implementation Details of Preply’s Design System Visual Coverage](https://medium.com/preply-engineering/the-implementation-details-of-preplys-design-system-visual-coverage-86b4a78ad2bb) to dig into the implementation details.
 
 ## Why are we sharing it?
