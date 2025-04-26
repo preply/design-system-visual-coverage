@@ -23,7 +23,6 @@ export default defineConfig({
     test: {
         // Browser tests must be run in a browser environment, not the default jsdom.
         exclude: [browserTestGlob],
-        environment: 'jsdom',
         globals: true,
         setupFiles: [path.join(__dirname, './vitest.setup.ts')],
         coverage: {
