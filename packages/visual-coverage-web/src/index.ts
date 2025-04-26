@@ -1,5 +1,4 @@
-export { isLogQueryParamSet } from './debug/queryParams';
-export { DsVisualCoverageError } from './debug/DsVisualCoverageError';
+export { nullAttributeValue } from './constants';
+export { countPixels } from './core/countPixels';
+export { visualizeCoverage } from './debug/visualizeCoverage';
 export { createCalculateDsVisualCoverages } from './createCalculateDsVisualCoverages';
-export { exposeGlobalDsVisualCoverageObject } from './debug/exposeGlobalDsVisualCoverageObject';
-export { getCoverageContainerAttributes } from './coverageContainer/getCoverageContainerAttributes';

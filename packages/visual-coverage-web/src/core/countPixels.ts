@@ -4,12 +4,12 @@ import {
     isActiveLogger,
 } from '@preply/ds-visual-coverage-core';
 import type {
+    Bitmap,
     ChildData,
     Logger,
     Milliseconds,
     PixelCounts,
     Rect,
-    WeightByComponentName,
 } from '@preply/ds-visual-coverage-core';
 
 import { createPromise } from '../utils/createPromise';
@@ -23,6 +23,17 @@ import type {
 
 type CountPixelsResult = {
     pixelCounts: PixelCounts;
+
+    // Tells the consumer what numbers have been used for every component name, useful to
+    // post-process the bitmap independently
+    pixelByComponentName: Record<string, number>;
+
+    // Tells the consumer what number has been used for the non-DS components pixels, useful to
+    // post-process the bitmap independently
+    nonDsComponentsPixel: number;
+
+    // It's returned when passed with `returnBitmap: true`
+    bitmap: Bitmap | null;
 } & (
     | {
           stopped: false;
@@ -39,13 +50,14 @@ export type StopReason = 'timeout';
 type Params = {
     logger: Logger;
     elementRect: Rect;
-    printAsciiArt: boolean;
+    // Useful for debugging purposes. Please consider it slows down the serialization process between
+    // the threads
+    returnBitmap: boolean;
     childrenData: ChildData[];
-    weightByComponentName: WeightByComponentName;
 };
 
 export function countPixels(params: Params): Promise<CountPixelsResult> {
-    const { logger, elementRect, childrenData, printAsciiArt, weightByComponentName } = params;
+    const { logger, elementRect, childrenData } = params;
     const start: Milliseconds = Date.now();
     let stopped = false;
 
@@ -54,9 +66,12 @@ export function countPixels(params: Params): Promise<CountPixelsResult> {
     function onTimeout() {
         stopped = true;
         resolver({
+            bitmap: null,
             stopped: true,
             stopReason: 'timeout',
-            pixelCounts: createPixelCounts(),
+            nonDsComponentsPixel: 0,
+            pixelByComponentName: {},
+            pixelCounts: createPixelCounts(0),
         });
     }
 
@@ -72,11 +87,17 @@ export function countPixels(params: Params): Promise<CountPixelsResult> {
 
             if (event.data.status === 'error') {
                 rejecter(event.data.error);
+            } else if (event.data.status === 'logOnMainThread') {
+                logger.log(event.data.data);
             } else {
+                const bitmap = event.data.data.bitmap;
                 resolver({
                     stopped: false,
                     duration: Date.now() - start,
                     pixelCounts: event.data.data.pixelCounts,
+                    pixelByComponentName: event.data.data.pixelByComponentName,
+                    nonDsComponentsPixel: event.data.data.nonDsComponentsPixel,
+                    bitmap,
                 });
             }
             worker.terminate();
@@ -85,8 +106,7 @@ export function countPixels(params: Params): Promise<CountPixelsResult> {
         const createCountPixelsWorkerParams: CreateCountPixelsWorkerParams = {
             elementRect,
             childrenData,
-            printAsciiArt,
-            weightByComponentName,
+            returnBitmap: false,
             log: isActiveLogger(logger),
             offset: {
                 top: getRectCoordinate(elementRect, 'top'),

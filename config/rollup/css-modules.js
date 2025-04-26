@@ -1,3 +1,5 @@
+/* eslint-disable security/detect-non-literal-fs-filename */
+
 const { readFile, writeFile } = require('fs/promises');
 const { resolve } = require('path');
 
@@ -5,6 +7,7 @@ const { resolve } = require('path');
  * this custom rollup plugin serves 3 purposes:
  * - removes the unnecessary duplication of CSS source code emitted by https://github.com/egoist/rollup-plugin-postcss
  * - includes the filename in the export so that we can deduplicate styles collected during SSR (see @preply/ds-web-root/ssr/classes/ServerStylesheet.tsx)
+ * - removes the (broken) JS source map from compiled CSS modules https://preply.atlassian.net/browse/DES-113
  */
 
 const BROKEN_SOURCE_MAP_REGEXP =

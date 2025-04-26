@@ -1,20 +1,17 @@
-import type { Logger } from '@preply/ds-visual-coverage-core';
+import type { GetContainerData, Logger } from '@preply/ds-visual-coverage-core';
 
-import type { ShouldIgnoreContainer, ViewMeasurements } from '../types';
-
-import { hasCoverageContainerAccessibilityIdentifier } from './hasCoverageContainerAccessibilityIdentifier';
-import { parseCoverageContainerAccessibilityIdentifier } from './parseCoverageContainerAccessibilityIdentifier';
+import type { ViewMeasurement, ViewMeasurements } from '../types';
 
 type Params = {
     logger: Logger;
     viewMeasurements: ViewMeasurements;
-    shouldIgnoreContainer: ShouldIgnoreContainer;
+    getContainerData: GetContainerData<ViewMeasurement>;
 };
 
 type Return = ViewMeasurements;
 
 export function getCoverageContainers(params: Params): Return {
-    const { logger, shouldIgnoreContainer, viewMeasurements: mutableViewMeasurements } = params;
+    const { logger, getContainerData, viewMeasurements: mutableViewMeasurements } = params;
 
     const result: Return = [];
 
@@ -25,22 +22,20 @@ export function getCoverageContainers(params: Params): Return {
             throw new Error(`No viewMeasurement at ${i} (this should be a TS-only protection)`);
         }
 
-        if (hasCoverageContainerAccessibilityIdentifier(viewMeasurement)) {
-            const coverageContainer = parseCoverageContainerAccessibilityIdentifier(
-                viewMeasurement.accessibilityIdentifier,
-            );
+        const getContainerDataResult = getContainerData({
+            component: viewMeasurement,
+        });
 
-            if (shouldIgnoreContainer(coverageContainer)) {
-                logger('Ignoring element', coverageContainer.component, coverageContainer.team);
-            } else {
-                result.push(viewMeasurement);
-            }
+        if (getContainerDataResult.result === 'ignoreCoverageContainer') {
+            continue;
+        } else if (getContainerDataResult.result === 'isCoverageContainer') {
+            result.push(viewMeasurement);
         }
 
         result.push(
             ...getCoverageContainers({
                 logger,
-                shouldIgnoreContainer,
+                getContainerData,
                 viewMeasurements: viewMeasurement.children,
             }),
         );

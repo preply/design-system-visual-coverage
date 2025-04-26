@@ -1,25 +1,13 @@
-import {
-    ColorByPixelType,
-    PixelByPixelType,
-    WeightByComponentName,
-    createLogger,
-    defaultColorByPixelType,
-    defaultWeightByComponentName,
-} from '@preply/ds-visual-coverage-core';
-import { defaultPixelByPixelType } from '@preply/ds-visual-coverage-core/dist/core/constants';
+import { createLogger } from '@preply/ds-visual-coverage-core';
+import type { GetContainerData, GetComponentData } from '@preply/ds-visual-coverage-core';
 
 import { calculateDsVisualCoverages } from './calculateDsVisualCoverages';
-import { defaultShouldIgnoreContainer } from './core/constants';
-import type { OnComplete, OnError, RootSwiftView, ShouldIgnoreContainer } from './types';
+import type { OnComplete, OnError, RootSwiftView, ViewMeasurement } from './types';
 
 type Params = {
     log: boolean;
-    printAsciiArt: boolean;
-    pixelByPixelType?: PixelByPixelType;
-    colorByPixelType?: ColorByPixelType;
-    weightByComponentName?: WeightByComponentName;
-    shouldIgnoreContainer?: ShouldIgnoreContainer;
-    stopVisualCoverageCalculation: () => boolean;
+    getContainerData: GetContainerData<ViewMeasurement>;
+    getComponentData: GetComponentData<ViewMeasurement>;
 };
 
 type Result = {
@@ -32,14 +20,7 @@ type Result = {
 };
 
 export function createCalculateDsVisualCoverages(params: Params): Result {
-    const {
-        log,
-        printAsciiArt,
-        colorByPixelType = defaultColorByPixelType,
-        pixelByPixelType = defaultPixelByPixelType,
-        weightByComponentName = defaultWeightByComponentName,
-        shouldIgnoreContainer = defaultShouldIgnoreContainer,
-    } = params;
+    const { log, getComponentData, getContainerData } = params;
     let canceled = false;
     const stopVisualCoverageCalculation = () => canceled;
 
@@ -57,14 +38,10 @@ export function createCalculateDsVisualCoverages(params: Params): Result {
         calculateDsVisualCoverages({
             logger,
             onError,
-
             onComplete,
-            printAsciiArt,
             rootSwiftView,
-            pixelByPixelType,
-            colorByPixelType,
-            weightByComponentName,
-            shouldIgnoreContainer,
+            getComponentData,
+            getContainerData,
             stopVisualCoverageCalculation,
         });
     }

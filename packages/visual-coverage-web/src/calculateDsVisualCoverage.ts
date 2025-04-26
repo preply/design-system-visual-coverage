@@ -1,31 +1,29 @@
 import type {
-    ColorByPixelType,
-    DsVisualCoverageResult,
     Logger,
-    WeightByComponentName,
+    Warning,
+    GetComponentData,
+    DsVisualCoverageResult,
 } from '@preply/ds-visual-coverage-core';
 import {
-    addSvgRectangles,
+    hasNoSize,
     createPixelCounts,
-    isEmptyCoverageContainer,
+    DsVisualCoverageError,
+    doesNotContainChildren,
 } from '@preply/ds-visual-coverage-core';
+import { nullAttributeValue } from './constants';
 
 import { countPixels } from './core/countPixels';
 import { loopOverDomChildren } from './core/loopOverDomChildren';
-import { DsVisualCoverageError } from './debug/DsVisualCoverageError';
 import type { RequestIdleCallback } from './support/getRequestIdleCallback';
-import type { CoverageContainerData } from './types';
+import type { CoverageContainerData, CoverageContainerDataAttribute } from './types';
 
 type Params = {
     logger: Logger;
-    userType: string;
-    printAsciiArt: boolean;
-    colorByPixelType: ColorByPixelType;
-    weightByComponentName: WeightByComponentName;
-    svgRenderer?: SVGSVGElement | undefined;
+    getComponentData: GetComponentData<Element>;
     stopVisualCoverageCalculation: () => boolean;
     requestIdleCallbackFunc: RequestIdleCallback;
     dsVisualCoverageContainerData: CoverageContainerData;
+    coverageContainersDataAttribute: CoverageContainerDataAttribute | undefined;
 };
 
 type Return = DsVisualCoverageResult & {
@@ -35,29 +33,51 @@ type Return = DsVisualCoverageResult & {
 export async function calculateDsVisualCoverage(params: Params): Promise<Return> {
     const {
         logger,
-        userType,
-        svgRenderer,
-        printAsciiArt,
-        colorByPixelType,
-        weightByComponentName,
+        getComponentData,
         requestIdleCallbackFunc,
         stopVisualCoverageCalculation,
         dsVisualCoverageContainerData,
+        coverageContainersDataAttribute,
     } = params;
 
-    const { domElement, elementRect } = dsVisualCoverageContainerData;
+    const { domElement, elementRect, attributeValue } = dsVisualCoverageContainerData;
+    const warnings: Warning[] = [];
 
     // --------------------------------------------------
     // LOOP OVER DOM CHILDREN
     // --------------------------------------------------
+    const getComponentDataResult = getComponentData({ component: domElement, parentsData: [] });
+
+    if (getComponentDataResult.result === 'ignoreComponent') {
+        const debugInfo = attributeValue ?? nullAttributeValue;
+        throw new DsVisualCoverageError({
+            platform: 'web',
+            debugInfo,
+            stopReason: 'coverageContainerIgnored',
+            message: `The coverage container is an element that should be ignored (${debugInfo})`,
+        });
+    }
+
+    const { weight, dsComponentName, debugInfo, debugColor } = getComponentDataResult;
+
     const loopOverDomChildrenResult = await loopOverDomChildren({
-        domElement,
         logger,
+        domElement,
+        getComponentData,
         requestIdleCallbackFunc,
         stopVisualCoverageCalculation,
+        coverageContainersDataAttribute,
+        coverageContainerData: {
+            rect: elementRect,
+            weight,
+            debugInfo,
+            debugColor,
+            dsComponentName,
+        },
     });
 
     const { childrenData } = loopOverDomChildrenResult;
+
     const loopOverDomChildrenDuration = loopOverDomChildrenResult.stopped
         ? 0
         : loopOverDomChildrenResult.duration;
@@ -66,21 +86,25 @@ export async function calculateDsVisualCoverage(params: Params): Promise<Return>
         : undefined;
 
     if (loopOverDomChildrenStopReason !== undefined) {
-        throw new DsVisualCoverageError(
-            {
-                userType,
-                stopReason: loopOverDomChildrenStopReason,
-                team: params.dsVisualCoverageContainerData.coverageContainer.team,
-                component: params.dsVisualCoverageContainerData.coverageContainer.component,
-            },
-            `loopOverDomChildren stopped (${loopOverDomChildrenStopReason})`,
-        );
+        const coverageContainer = attributeValue ?? nullAttributeValue;
+
+        throw new DsVisualCoverageError({
+            platform: 'web',
+            debugInfo: coverageContainer,
+            stopReason: loopOverDomChildrenStopReason,
+            message: `loopOverDomChildren stopped (${loopOverDomChildrenStopReason})`,
+        });
     }
 
-    let pixelCounts = createPixelCounts();
+    let pixelCounts = createPixelCounts(0);
     let countPixelsDuration = 0;
+    let pixelByComponentName = {};
+    let nonDsComponentsPixel = 0;
 
-    if (!isEmptyCoverageContainer({ childrenData })) {
+    if (hasNoSize({ rect: elementRect })) warnings.push('hasNoSize');
+    if (doesNotContainChildren({ childrenData })) warnings.push('doesNotContainChildren');
+
+    if (warnings.length === 0) {
         // --------------------------------------------------
         // COUNT PIXELS
         // --------------------------------------------------
@@ -88,43 +112,36 @@ export async function calculateDsVisualCoverage(params: Params): Promise<Return>
             logger,
             elementRect,
             childrenData,
-            printAsciiArt,
-            weightByComponentName,
+            returnBitmap: false,
         });
         pixelCounts = countPixelsResult.pixelCounts;
+        pixelByComponentName = countPixelsResult.pixelByComponentName;
+        nonDsComponentsPixel = countPixelsResult.nonDsComponentsPixel;
         countPixelsDuration = countPixelsResult.stopped ? 0 : countPixelsResult.duration;
         const countPixelsStopReason = countPixelsResult.stopped
             ? countPixelsResult.stopReason
             : undefined;
         if (countPixelsStopReason !== undefined) {
-            throw new DsVisualCoverageError(
-                {
-                    userType,
-                    stopReason: countPixelsStopReason,
-                    team: params.dsVisualCoverageContainerData.coverageContainer.team,
-                    component: params.dsVisualCoverageContainerData.coverageContainer.component,
-                },
-                'countPixels stopped',
-            );
+            const coverageContainer = attributeValue ?? nullAttributeValue;
+
+            throw new DsVisualCoverageError({
+                platform: 'web',
+                debugInfo: coverageContainer,
+                message: 'countPixels stopped',
+                stopReason: countPixelsStopReason,
+            });
         }
     }
 
-    // --------------------------------------------------
-    // VISUALIZE COVERAGE
-    // --------------------------------------------------
-    if (svgRenderer) {
-        addSvgRectangles({
-            svgRenderer,
-            childrenData,
-            colorByPixelType,
-            weightByComponentName,
-        });
-    }
-
     return {
+        warnings,
+
         pixelCounts,
-        stopped: false,
+        pixelByComponentName,
+        nonDsComponentsPixel,
+
         elementRect,
+        childrenData,
         dsVisualCoverageContainerData,
 
         duration: {

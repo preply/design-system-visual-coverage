@@ -34,16 +34,18 @@ export function filterOutIntermediateChildren(params: Params): FilterOutIntermed
 
         if (!nextChild) {
             const prevChild = filteredChildrenData[filteredChildrenData.length - 1];
+
             if (!prevChild) {
                 filteredChildrenData.push(child);
                 break;
             }
 
             const comparison = compareTwoChildren(prevChild, child);
-            const lastIntermediateChildCoverLatestDsComponent =
-                comparison !== 'bIsEqualToAButBIsNotDsComponentAndAIs';
+            const isIntermediateChild =
+                comparison === 'bAndAAreEqualNonDsComponents' ||
+                comparison === 'bIsEqualToAButBIsNotDsComponentAndAIs';
 
-            if (lastIntermediateChildCoverLatestDsComponent) filteredChildrenData.push(child);
+            if (!isIntermediateChild) filteredChildrenData.push(child);
 
             break;
         }

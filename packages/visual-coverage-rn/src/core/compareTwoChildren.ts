@@ -32,7 +32,7 @@ export function compareTwoChildren(a: ChildData, b: ChildData): ChildDataCompari
         const bIsPreplyDsComponent = !!b.dsComponentName;
 
         // Hypothesis: App has more intermediate components than Web. On App, the nested
-        // React Native views do not impact that the user sees. That's why DS components
+        // React Native views do not impact what the user sees. That's why DS components
         // are put after (meaning more closer to the user from a visual perspective) the non
         // DS one.
         // On Web, instead, a flex-display'ed div nested inside a DS LayoutFlex breaks
@@ -45,15 +45,7 @@ export function compareTwoChildren(a: ChildData, b: ChildData): ChildDataCompari
         }
 
         if (bIsPreplyDsComponent && aIsPreplyDsComponent) {
-            if (
-                b.dsComponentType === 'uiDsComponent' &&
-                a.dsComponentType === 'layoutDsComponent'
-            ) {
-                // Theoretically, ui components should be inside layout components, not the opposite
-                return 'bIsEqualToAButBIsDsUiComponentAndAIsLayoutComponent';
-            }
-
-            if (b.dsComponentType === a.dsComponentType) {
+            if (b.dsComponentName === a.dsComponentName) {
                 return 'bAndAAreEqualDsComponents';
             }
 

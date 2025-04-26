@@ -1,6 +1,6 @@
 {
     "name": "@preply/ds-visual-coverage-core",
-    "version": "0.99.0",
+    "version": "1.4.5",
     "type": "module",
     "publishConfig": {
         "access": "public"
@@ -13,17 +13,12 @@
     "browserslist": "last 2 versions",
     "scripts": {
         "clean": "rm -rf dist",
-        "test": "run --top-level vitest --coverage --watch=false",
+        "test": "run check:types && run --top-level vitest --coverage --watch=false",
+        "test:watch": "run --top-level vitest --watch=true",
+        "check:types": "run --top-level tsc --noEmit",
         "build": "NODE_ENV=production && run build:rollup",
         "build:rollup": "run --top-level rollup -c rollup.config.cjs",
         "dev": "run build:rollup -w"
-    },
-    "dependencies": {
-        "@preply/ds-visual-coverage-component-names": "0.99.0",
-        "jsdom": "^24.1.1"
-    },
-    "peerDependencies": {
-        "@preply/ds-visual-coverage-component-names": "0.99.0"
     },
     "gitHead": "43a57736ab7534349a8a7224e2ae426110af95cc"
 }

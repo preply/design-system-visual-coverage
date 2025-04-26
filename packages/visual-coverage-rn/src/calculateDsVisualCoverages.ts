@@ -1,17 +1,20 @@
 import {
-    ColorByPixelType,
-    DsVisualCoverageDeNormalizedResult,
-    Logger,
-    PixelByPixelType,
-    WeightByComponentName,
-    filterOutEmptyContainers,
+    DsVisualCoverageError,
+    removeRedundantWarnings,
+    addEmptyContainersWarnings,
     getDenormalizedCoverageResult,
+} from '@preply/ds-visual-coverage-core';
+
+import type {
+    Logger,
+    GetContainerData,
+    GetComponentData,
+    DsVisualCoverageDeNormalizedResult,
 } from '@preply/ds-visual-coverage-core';
 
 import { calculateDsVisualCoverage } from './calculateDsVisualCoverage';
 import { getCoverageContainersData } from './coverageContainer/getCoverageContainersData';
-import { DsVisualCoverageError } from './debug/DsVisualCoverageError';
-import type { OnComplete, OnError, RootSwiftView, ShouldIgnoreContainer } from './types';
+import type { OnError, OnComplete, RootSwiftView, ViewMeasurement } from './types';
 
 export type Params = {
     logger: Logger;
@@ -22,13 +25,10 @@ export type Params = {
     onError: OnError;
     onComplete: OnComplete;
 
-    printAsciiArt: boolean;
     rootSwiftView: RootSwiftView;
-    colorByPixelType: ColorByPixelType;
-    pixelByPixelType: PixelByPixelType;
-    weightByComponentName: WeightByComponentName;
-    shouldIgnoreContainer: ShouldIgnoreContainer;
+    getContainerData: GetContainerData<ViewMeasurement>;
     stopVisualCoverageCalculation: () => boolean;
+    getComponentData: GetComponentData<ViewMeasurement>;
 };
 
 export function calculateDsVisualCoverages(params: Params): void {
@@ -36,12 +36,9 @@ export function calculateDsVisualCoverages(params: Params): void {
         logger,
         onError,
         onComplete,
-        printAsciiArt,
         rootSwiftView,
-        pixelByPixelType,
-        colorByPixelType,
-        weightByComponentName,
-        shouldIgnoreContainer,
+        getComponentData,
+        getContainerData,
         stopVisualCoverageCalculation,
     } = params;
 
@@ -49,7 +46,7 @@ export function calculateDsVisualCoverages(params: Params): void {
 
     const dsVisualCoverageContainersData = getCoverageContainersData({
         logger,
-        shouldIgnoreContainer,
+        getContainerData,
         mutableRootSwiftView: rootSwiftView,
     });
 
@@ -62,59 +59,64 @@ export function calculateDsVisualCoverages(params: Params): void {
         return;
     }
 
-    logger('🎬 Calculation start');
+    logger.log('🎬 Calculation start');
 
     const results: DsVisualCoverageDeNormalizedResult[] = [];
+    const analyzedContainers = new Set(dsVisualCoverageContainersData);
     dsVisualCoverageContainersData.forEach(dsVisualCoverageContainerData => {
         try {
             const result = calculateDsVisualCoverage({
                 logger,
-                printAsciiArt,
-                colorByPixelType,
-                pixelByPixelType,
-                weightByComponentName,
+                getContainerData,
+                getComponentData,
                 dsVisualCoverageContainerData,
             });
 
+            analyzedContainers.delete(dsVisualCoverageContainerData);
             results.push(
                 getDenormalizedCoverageResult({
                     result,
-                    dsVisualCoverageContainerData,
+                    debugInfo:
+                        dsVisualCoverageContainerData.coverageContainerAccessibilityIdentifier,
+                    coverageContainerAttributeValue:
+                        dsVisualCoverageContainerData.coverageContainerAccessibilityIdentifier,
                 }),
             );
-            if (results.length !== dsVisualCoverageContainersData.length) return;
+            if (analyzedContainers.size !== 0) return;
 
-            logger('🏁 Calculation end');
-            const meaningfulResults = filterOutEmptyContainers({
-                results,
-                logger,
-                pixelByPixelType,
+            logger.log('🏁 Calculation end');
+            addEmptyContainersWarnings({
+                mutableResults: results,
             });
-            meaningfulResults.forEach(r => {
-                logger(`Component: ${r.component} - Team: ${r.team} - Coverage: ${r.coverage}`);
+            results.forEach(r => {
+                r.warnings = removeRedundantWarnings({ warnings: r.warnings });
+                if (r.warnings.length > 0) {
+                    logger.warn(`Container: ${r.debugInfo} - Warnings: ${r.warnings}`);
+                } else {
+                    const percentage = `${r.coverage.toFixed(2)} %`;
+                    logger.log(`Container: ${r.debugInfo} - Coverage: ${percentage}`);
+                }
             });
 
             if (stopVisualCoverageCalculation()) {
-                logger('calculateDsVisualCoverages stopped');
+                logger.log('calculateDsVisualCoverages stopped');
                 return;
             }
 
             onComplete({
                 stopped: false,
                 totalDuration: Date.now() - start,
-                dsVisualCoverageResults: meaningfulResults,
+                dsVisualCoverageResults: results,
             });
         } catch (error: unknown) {
-            const { team, component } = dsVisualCoverageContainerData.coverageContainer;
+            analyzedContainers.delete(dsVisualCoverageContainerData);
 
-            const newError = new DsVisualCoverageError(
-                {
-                    team,
-                    component,
-                    stopReason: 'unknownStopReason',
-                },
-                error instanceof Error ? error.message : `${error}`,
-            );
+            const newError = new DsVisualCoverageError({
+                platform: 'rn',
+                stopReason: 'unknownStopReason',
+                debugInfo: dsVisualCoverageContainerData.coverageContainer,
+                message: error instanceof Error ? error.message : `${error}`,
+            });
 
             // If you want to keep the original stack trace:
             newError.stack = error instanceof Error ? (error.stack ?? '') : '';

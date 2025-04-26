@@ -14,6 +14,8 @@ const { fixupPluginRules } = require('@eslint/compat');
 const tsParser = require('@typescript-eslint/parser');
 const vitest = require('eslint-plugin-vitest');
 const serverComponents = require('eslint-plugin-react-server-components');
+const formatjs = require('eslint-plugin-formatjs');
+const intlForceIdPrefix = require('@preply/ds-eslint-plugin-intl-force-id-prefix');
 
 const compat = new FlatCompat();
 
@@ -30,6 +32,9 @@ module.exports = ts.config(
             '*.d.ts',
             'eslint.config.cjs',
             'packages/*/coverage',
+            'support/rn-expo/.storybook/storybook.requires.js',
+            'support/rn-expo/.expo/**/*',
+            'support/rn-expo/expo-env.d.ts',
         ],
     },
     {
@@ -53,6 +58,7 @@ module.exports = ts.config(
     mdx.flat,
     mdx.flatCodeBlocks,
     jsxA11y.flatConfigs.recommended,
+    formatjs.configs.recommended,
     {
         files: ['**/*.{jsx,tsx}'],
         plugins: {
@@ -87,9 +93,11 @@ module.exports = ts.config(
         ignores: ['**/*.test.{ts,tsx,js,jsx}', '**/docs/**', '*.stories.tsx'],
         plugins: {
             'react-server-components': fixupPluginRules(serverComponents),
+            'force-intl-id-prefix': intlForceIdPrefix,
         },
         rules: {
             ...serverComponents.configs.recommended.rules,
+            'force-intl-id-prefix/force-intl-id-prefix': 'error',
         },
     },
     {
@@ -144,6 +152,7 @@ module.exports = ts.config(
             'support/docs/config/**/*',
             'packages/rn-lib/test/**',
             '**/*.cjs',
+            'support/rn-expo/**/*',
         ],
         languageOptions: { globals: globals.node, sourceType: 'commonjs' },
         rules: {
@@ -170,8 +179,21 @@ module.exports = ts.config(
     {
         rules: {
             'security/detect-object-injection': 'off',
+            'formatjs/enforce-id': 'error',
+            'formatjs/no-literal-string-in-jsx': 'error',
         },
     },
-
+    {
+        files: [
+            'support/**/*',
+            '**/*.mdx',
+            '**/*.stories.{ts,tsx}',
+            '**/*.test.{ts,tsx}',
+            '**/tests/**/*',
+        ],
+        rules: {
+            'formatjs/no-literal-string-in-jsx': 'off',
+        },
+    },
     prettierRecommended,
 );

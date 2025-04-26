@@ -1,4 +1,5 @@
 import { createLogger, createRect } from '@preply/ds-visual-coverage-core';
+import type { GetContainerData } from '@preply/ds-visual-coverage-core';
 
 import type { RootSwiftView, ViewMeasurement } from '../types';
 
@@ -48,6 +49,31 @@ const childContainerStub: ViewMeasurement = {
         'ChildComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ChildComponent"}',
     instanceOf: '',
     children: [],
+};
+
+const getContainerDataStub: GetContainerData<ViewMeasurement> = ({ component }) => {
+    if (!component.accessibilityIdentifier) {
+        return { result: 'isNotCoverageContainer' };
+    }
+
+    if (!component.accessibilityIdentifier.includes('-dsCoverage:coverageContainer:')) {
+        return { result: 'isNotCoverageContainer' };
+    }
+
+    const coverageContainer = component.accessibilityIdentifier.split(
+        '-dsCoverage:coverageContainer',
+    )[1];
+
+    if (!coverageContainer) {
+        return {
+            result: 'isNotCoverageContainer',
+        };
+    }
+
+    return {
+        result: 'isCoverageContainer',
+        coverageContainer,
+    };
 };
 
 describe('getCoverageContainersData', () => {
@@ -106,12 +132,11 @@ describe('getCoverageContainersData', () => {
             const expectedResult: ReturnType<typeof getCoverageContainersData> = [
                 {
                     children: [],
-                    coverageContainer: {
-                        component: 'Main',
-                        team: 'app-core',
-                    },
+                    instanceOf: '',
+                    accessibilityLabel: '',
+                    coverageContainer: mainCoverageContainerStub.accessibilityIdentifier,
                     coverageContainerAccessibilityIdentifier:
-                        'Main-dsCoverage:coverageContainer:{"team":"app-core","component":"Main"}',
+                        mainCoverageContainerStub.accessibilityIdentifier,
                     elementRect: createRect({ width: 0, height: 0, left: 0, top: 0 }),
                 },
                 {
@@ -119,10 +144,11 @@ describe('getCoverageContainersData', () => {
                         {
                             accessibilityIdentifier: '',
                             accessibilityLabel: '',
+                            instanceOf: '',
                             children: [
                                 {
                                     accessibilityIdentifier:
-                                        'ChildComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ChildComponent"}',
+                                        childContainerStub.accessibilityIdentifier,
                                     accessibilityLabel: '',
                                     children: [
                                         { ...emptyComponentStub },
@@ -136,28 +162,25 @@ describe('getCoverageContainersData', () => {
                                 },
                             ],
                             height: 0,
-                            instanceOf: '',
                             left: 0,
                             top: 0,
                             width: 0,
                         },
                     ],
-                    coverageContainer: {
-                        component: 'ParentComponent',
-                        team: 'app-core',
-                    },
+                    coverageContainer: parentContainerStub.accessibilityIdentifier,
                     coverageContainerAccessibilityIdentifier:
-                        'ParentComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ParentComponent"}',
+                        parentContainerStub.accessibilityIdentifier,
                     elementRect: createRect({ width: 0, height: 0, left: 0, top: 0 }),
+                    instanceOf: '',
+                    accessibilityLabel: '',
                 },
                 {
                     children: [{ ...emptyComponentStub }, { ...emptyComponentStub }],
-                    coverageContainer: {
-                        component: 'ChildComponent',
-                        team: 'app-core',
-                    },
+                    instanceOf: '',
+                    accessibilityLabel: '',
+                    coverageContainer: childContainerStub.accessibilityIdentifier,
                     coverageContainerAccessibilityIdentifier:
-                        'ChildComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ChildComponent"}',
+                        childContainerStub.accessibilityIdentifier,
                     elementRect: createRect({ width: 0, height: 0, left: 0, top: 0 }),
                 },
             ];
@@ -166,7 +189,7 @@ describe('getCoverageContainersData', () => {
             const result = getCoverageContainersData({
                 logger: loggerStub,
                 mutableRootSwiftView,
-                shouldIgnoreContainer: () => false,
+                getContainerData: getContainerDataStub,
             });
 
             // Assert

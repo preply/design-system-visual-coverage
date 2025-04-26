@@ -1,23 +1,37 @@
-import { getReadableBitmap } from '../bitmap/getReadableBitmap';
 import { createRect } from '../rect/rectProperties';
-import { ChildData, WeightByComponentName } from '../types';
-import { createLogger } from '../utils/createLogger';
+import { ChildData } from '../types';
 
-import { defaultPixelByPixelType } from './constants';
+import { emptyPixel } from './constants';
 import { countPixels } from './countPixels';
 
-const loggerStub = createLogger(false);
+import type { Bitmap } from '@preply/ds-visual-coverage-core';
 
-const weightByComponentName: WeightByComponentName = {
-    emptyPixel: 0,
+export function getReadableBitmap(params: {
+    width: number;
+    bitmap: Bitmap;
+    readablePixelByComponentName: Record<string, string>;
+}): string {
+    const { width, bitmap, readablePixelByComponentName } = params;
+    let string = '';
 
-    nonDsComponent: 1,
-    unknownDsComponent: 1,
-    Button: 1,
-    Checkbox: 1,
-    LayoutFlex: 1,
-    Loader: 1,
-};
+    for (let i = 0; i < bitmap.length; i++) {
+        if (i % width === 0) {
+            string += '\n';
+        }
+
+        const pixelAsNumber = bitmap[i];
+        if (pixelAsNumber === undefined) {
+            throw new Error(`No pixel at ${i} (this should be a TS-only protection)`);
+        }
+        const pixel = pixelAsNumber.toString();
+
+        const printedPixel = readablePixelByComponentName[pixel];
+
+        string += printedPixel;
+    }
+
+    return string;
+}
 
 describe('countPixels', () => {
     describe('Given a basic container', () => {
@@ -55,45 +69,45 @@ describe('countPixels', () => {
 
                 const productHeader: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 0, left: 0, width: 20, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const productBox: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 20, height: 11 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const dsHeading: ChildData = {
                     dsComponentName: 'Heading',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 6, left: 2, width: 16, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton1: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 7, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton2: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 13, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsBox: ChildData = {
                     dsComponentName: 'Box',
-                    dsComponentType: 'layoutDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 15, left: 0, width: 20, height: 5 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
 
                 const childrenData: ChildData[] = [
@@ -106,16 +120,24 @@ describe('countPixels', () => {
                 ];
 
                 const result = countPixels({
-                    logger: loggerStub,
                     elementRect: coverageContainerRect,
                     childrenData,
-                    printAsciiArt: false,
-                    pixelByPixelType: defaultPixelByPixelType,
-                    weightByComponentName,
                     offset: { top: 0, left: 0 },
                 });
-                expect(getReadableBitmap({ width: 20, bitmap: result.bitmap }))
-                    .toMatchInlineSnapshot(`
+
+                expect(
+                    getReadableBitmap({
+                        width: 20,
+                        bitmap: result.bitmap,
+                        readablePixelByComponentName: {
+                            [result.pixelByComponentName.Heading!]: '🟩',
+                            [result.pixelByComponentName.Button!]: '🟩',
+                            [result.pixelByComponentName.Box!]: '🟩',
+                            [emptyPixel]: '⬛️',
+                            [result.nonDsComponentsPixel]: '🟥',
+                        },
+                    }),
+                ).toMatchInlineSnapshot(`
                                             "
                                             🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
                                             🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥
@@ -175,45 +197,45 @@ describe('countPixels', () => {
 
                 const productHeader: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 0, left: 0, width: 20, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const productBox: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 20, height: 11 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const dsHeading: ChildData = {
                     dsComponentName: 'Heading',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 6, left: 2, width: 16, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton1: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 7, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton2: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 13, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsBox: ChildData = {
                     dsComponentName: 'Box',
-                    dsComponentType: 'layoutDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 15, left: 0, width: 20, height: 5 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
 
                 const childrenData: ChildData[] = [
@@ -226,22 +248,23 @@ describe('countPixels', () => {
                 ];
 
                 const result = countPixels({
-                    logger: loggerStub,
                     elementRect: coverageContainerRect,
                     childrenData,
-                    printAsciiArt: false,
-                    pixelByPixelType: defaultPixelByPixelType,
-                    weightByComponentName: {
-                        ...weightByComponentName,
-                        // Tweaking just some of the ones used by the test
-                        nonDsComponent: 2,
-                        Button: 2,
-                        Heading: 2,
-                    },
                     offset: { top: 0, left: 0 },
                 });
-                expect(getReadableBitmap({ width: 20, bitmap: result.bitmap }))
-                    .toMatchInlineSnapshot(`
+                expect(
+                    getReadableBitmap({
+                        width: 20,
+                        bitmap: result.bitmap,
+                        readablePixelByComponentName: {
+                            [result.pixelByComponentName.Heading!]: '🟩',
+                            [result.pixelByComponentName.Button!]: '🟩',
+                            [result.pixelByComponentName.Box!]: '🟩',
+                            [emptyPixel]: '⬛️',
+                            [result.nonDsComponentsPixel]: '🟥',
+                        },
+                    }),
+                ).toMatchInlineSnapshot(`
                                             "
                                             🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
                                             🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
@@ -298,38 +321,38 @@ describe('countPixels', () => {
 
                 const productHeader: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 0, left: 0, width: 20, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const productBox: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 20, height: 11 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const dsHeading: ChildData = {
                     dsComponentName: 'Heading',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 16, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton1: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 7, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton2: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 13, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
 
                 const childrenData: ChildData[] = [
@@ -341,16 +364,22 @@ describe('countPixels', () => {
                 ];
 
                 const result = countPixels({
-                    logger: loggerStub,
                     elementRect: coverageContainerRect,
                     childrenData,
-                    printAsciiArt: false,
-                    pixelByPixelType: defaultPixelByPixelType,
-                    weightByComponentName,
                     offset: { top: 0, left: 0 },
                 });
-                expect(getReadableBitmap({ width: 20, bitmap: result.bitmap }))
-                    .toMatchInlineSnapshot(`
+                expect(
+                    getReadableBitmap({
+                        width: 20,
+                        bitmap: result.bitmap,
+                        readablePixelByComponentName: {
+                            [result.pixelByComponentName.Heading!]: '🟩',
+                            [result.pixelByComponentName.Button!]: '🟩',
+                            [emptyPixel]: '⬛️',
+                            [result.nonDsComponentsPixel]: '🟥',
+                        },
+                    }),
+                ).toMatchInlineSnapshot(`
                                     "
                                     🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
                                     🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥
@@ -400,38 +429,38 @@ describe('countPixels', () => {
 
                 const productHeader: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 0, left: 0, width: 20, height: 3 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const productBox: ChildData = {
                     dsComponentName: null,
-                    dsComponentType: 'nonDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 20, height: 11 }),
-                    componentData: '',
+                    weight: 1,
+                    debugInfo: '',
+                    debugColor: 'red',
                 };
                 const dsHeading: ChildData = {
                     dsComponentName: 'Heading',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 4, left: 0, width: 16, height: 3 }),
-                    componentData: '',
+                    weight: 3,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton1: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 7, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
                 const dsButton2: ChildData = {
                     dsComponentName: 'Button',
-                    dsComponentType: 'uiDsComponent',
-                    isChildOfUiDsComponent: false,
                     rect: createRect({ top: 10, left: 13, width: 5, height: 3 }),
-                    componentData: '',
+                    weight: 2,
+                    debugInfo: '',
+                    debugColor: 'green',
                 };
 
                 const childrenData: ChildData[] = [
@@ -443,21 +472,22 @@ describe('countPixels', () => {
                 ];
 
                 const result = countPixels({
-                    logger: loggerStub,
                     elementRect: coverageContainerRect,
                     childrenData,
-                    printAsciiArt: false,
-                    pixelByPixelType: defaultPixelByPixelType,
-                    weightByComponentName: {
-                        ...weightByComponentName,
-                        // Tweaking just some of the ones used by the test
-                        Heading: 3,
-                        Button: 2,
-                    },
                     offset: { top: 0, left: 0 },
                 });
-                expect(getReadableBitmap({ width: 20, bitmap: result.bitmap }))
-                    .toMatchInlineSnapshot(`
+                expect(
+                    getReadableBitmap({
+                        width: 20,
+                        bitmap: result.bitmap,
+                        readablePixelByComponentName: {
+                            [result.pixelByComponentName.Heading!]: '🟩',
+                            [result.pixelByComponentName.Button!]: '🟩',
+                            [emptyPixel]: '⬛️',
+                            [result.nonDsComponentsPixel]: '🟥',
+                        },
+                    }),
+                ).toMatchInlineSnapshot(`
                         "
                         🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥
                         🟥⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️⬛️🟥

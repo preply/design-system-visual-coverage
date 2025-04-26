@@ -1,46 +1,35 @@
-import type { Logger } from '@preply/ds-visual-coverage-core';
-import { coverageContainerDomAttributeName, createRect } from '@preply/ds-visual-coverage-core';
+import type { GetContainerData, Logger } from '@preply/ds-visual-coverage-core';
+import { createRect } from '@preply/ds-visual-coverage-core';
 
-import type { CoverageContainerData, ShouldIgnoreContainer } from '../types';
-
-import { parseCoverageContainerDomAttribute } from './getCoverageContainerAttributes';
+import type { CoverageContainerDataAttribute, CoverageContainerData } from '../types';
 
 type Params = {
     logger: Logger;
-    rootElement: Document | HTMLElement;
-    shouldIgnoreContainer: ShouldIgnoreContainer;
+    rootElement: HTMLElement;
+    getContainerData: GetContainerData<Element> | undefined;
+
+    // If not present, the rootElement will be the only coverage container
+    coverageContainersDataAttribute: CoverageContainerDataAttribute | undefined;
 };
 
 type Return = Array<CoverageContainerData>;
 
 export function getCoverageContainersData(params: Params): Return {
-    const { logger, shouldIgnoreContainer, rootElement } = params;
+    const { logger, getContainerData, rootElement, coverageContainersDataAttribute } = params;
 
     const result: Return = [];
 
-    const coverageContainers = rootElement.querySelectorAll(
-        `[${coverageContainerDomAttributeName}]`,
-    );
-    logger(`Found ${coverageContainers.length} coverage containers`);
+    const coverageContainers = coverageContainersDataAttribute
+        ? rootElement.querySelectorAll(`[${coverageContainersDataAttribute}]`)
+        : [rootElement];
+
+    logger.log(`Found ${coverageContainers.length} coverage containers`);
 
     for (let i = 0, n = coverageContainers.length; i < n; i++) {
         const domElement = coverageContainers[i];
 
         if (!domElement)
             throw new Error(`No element at ${i} (this should be a TS-only protection)`);
-
-        const coverageDomAttribute = domElement?.getAttribute(coverageContainerDomAttributeName);
-
-        if (!coverageDomAttribute)
-            throw new Error('No element or attribute (this should be a TS-only protection)');
-
-        const parsedCoverageDomAttribute = parseCoverageContainerDomAttribute(
-            JSON.parse(coverageDomAttribute),
-        );
-        if (shouldIgnoreContainer(parsedCoverageDomAttribute)) {
-            logger('Ignoring element', domElement);
-            continue;
-        }
 
         const scrollingFulRect = domElement.getBoundingClientRect();
         const scrollingFreeRect = {
@@ -50,11 +39,30 @@ export function getCoverageContainersData(params: Params): Return {
             left: scrollingFulRect.left + globalThis.scrollX,
         };
 
+        const getContainerDataResult = getContainerData
+            ? getContainerData({
+                  component: domElement,
+              })
+            : {
+                  result: 'isCoverageContainer',
+                  coverageContainer: 'rootElement',
+              };
+
+        if (getContainerDataResult.result === 'ignoreCoverageContainer') {
+            continue;
+        } else if (getContainerDataResult.result === 'isNotCoverageContainer') {
+            // This use case doesn't really exist. It means that a DOM element has the passed
+            // coverage container attribute (otherwise the query would not find it) but the consumer
+            // decided that it's not a coverage container.
+            continue;
+        }
+
         result.push({
             domElement,
             elementRect: createRect(scrollingFreeRect),
-            coverageContainer: parsedCoverageDomAttribute,
-            coverageContainerAttributeValue: coverageDomAttribute,
+            attributeValue: coverageContainersDataAttribute
+                ? domElement.getAttribute(coverageContainersDataAttribute)
+                : null,
         });
     }
 

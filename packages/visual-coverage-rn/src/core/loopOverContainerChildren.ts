@@ -1,18 +1,25 @@
-import type { ChildData, Logger, Milliseconds } from '@preply/ds-visual-coverage-core';
-import { createRect, getComponentType } from '@preply/ds-visual-coverage-core';
+import type {
+    Logger,
+    ChildData,
+    Milliseconds,
+    GetComponentData,
+    GetContainerData,
+} from '@preply/ds-visual-coverage-core';
+import { createRect } from '@preply/ds-visual-coverage-core';
 
-import { hasCoverageContainerAccessibilityIdentifier } from '../coverageContainer/hasCoverageContainerAccessibilityIdentifier';
-import { parseDsComponentAccessibilityIdentifier } from '../coverageContainer/parseDsComponentAccessibilityIdentifier';
-import type { ViewMeasurements } from '../types';
+import type { ViewMeasurement, ViewMeasurements } from '../types';
 
 type Params = {
     logger: Logger;
     children: ViewMeasurements;
+    coverageContainerData: ChildData;
+    getContainerData: GetContainerData<ViewMeasurement>;
+    getComponentData: GetComponentData<ViewMeasurement>;
 
     // Must NOT be passed externally
     recursiveParams?: {
         childrenData: ChildData[];
-        isChildOfUiDsComponent: boolean;
+        parentsData: ChildData[];
     };
 };
 
@@ -25,9 +32,12 @@ export function loopOverContainerChildren(params: Params): LoopOverContainerChil
     const {
         logger,
         children,
-        recursiveParams: { childrenData, isChildOfUiDsComponent } = {
+        getContainerData,
+        getComponentData,
+        coverageContainerData,
+        recursiveParams: { childrenData, parentsData } = {
             childrenData: [],
-            isChildOfUiDsComponent: false,
+            parentsData: [coverageContainerData],
         },
     } = params;
 
@@ -39,35 +49,52 @@ export function loopOverContainerChildren(params: Params): LoopOverContainerChil
         if (!child) throw new Error(`No child at ${i} (this should be a TS-only protection)`);
 
         // Stop when encounter other containers.
-        if (hasCoverageContainerAccessibilityIdentifier(child)) continue;
+        const getContainerDataResult = getContainerData({ component: child });
+        const coverageContainerFound =
+            getContainerDataResult.result === 'ignoreCoverageContainer' ||
+            getContainerDataResult.result === 'isCoverageContainer';
 
-        const dsComponentName = parseDsComponentAccessibilityIdentifier(
-            child.accessibilityIdentifier,
-        );
-        const dsComponentType = getComponentType(dsComponentName);
-        const isUiDsComponent = dsComponentType === 'uiDsComponent';
+        if (coverageContainerFound) continue;
 
-        childrenData.push({
-            dsComponentName: dsComponentType === 'nonDsComponent' ? null : dsComponentName,
-            isChildOfUiDsComponent,
-            dsComponentType,
-            rect: createRect({
-                top: child.top,
-                left: child.left,
-                width: child.width,
-                height: child.height,
-            }),
-            componentData: child.accessibilityIdentifier,
+        const getComponentDataResult = getComponentData({
+            component: child,
+            parentsData,
         });
+
+        if (getComponentDataResult.result === 'ignoreComponent') continue;
+
+        const { weight, dsComponentName, debugInfo, debugColor } = getComponentDataResult;
+
+        const rect = createRect({
+            top: child.top,
+            left: child.left,
+            width: child.width,
+            height: child.height,
+        });
+
+        const childData: ChildData = {
+            rect,
+            weight,
+            debugInfo,
+            debugColor,
+            dsComponentName,
+        };
+
+        childrenData.push(childData);
+        parentsData.push(childData);
 
         loopOverContainerChildren({
             logger,
+            getContainerData,
+            getComponentData,
+            coverageContainerData,
             children: child.children,
             recursiveParams: {
                 childrenData,
-                isChildOfUiDsComponent: isUiDsComponent || isChildOfUiDsComponent,
+                parentsData,
             },
         });
+        parentsData.pop();
     }
 
     return {

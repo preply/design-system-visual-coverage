@@ -1,56 +1,45 @@
 import {
-    ColorByPixelType,
     DsVisualCoverageDeNormalizedResult,
     Logger,
-    WeightByComponentName,
-    filterOutEmptyContainers,
+    addEmptyContainersWarnings,
     getDenormalizedCoverageResult,
-    getRectCoordinates,
-    svgRendererAttributeName,
+    removeRedundantWarnings,
+    DsVisualCoverageError,
+    GetContainerData,
 } from '@preply/ds-visual-coverage-core';
+
+import type { GetComponentData } from '@preply/ds-visual-coverage-core';
 
 import { calculateDsVisualCoverage } from './calculateDsVisualCoverage';
 import { getCoverageContainersData } from './coverageContainer/getCoverageContainersData';
-import { DsVisualCoverageError } from './debug/DsVisualCoverageError';
 import type { RequestIdleCallback } from './support/getRequestIdleCallback';
-import type { OnComplete, OnError, ShouldIgnoreContainer } from './types';
+import type { CoverageContainerDataAttribute, OnComplete, OnError } from './types';
+import { getOpeningHtmlTag } from './utils/getOpeningHtmlTag';
+import { nullAttributeValue } from './constants';
 
 type Params = {
     logger: Logger;
     onError: OnError;
-    // TODO: this should become part of a `meta` object passed back to the callbacks, it should not be part of DS scope
-    userType: string;
     onComplete: OnComplete;
-    printAsciiArt: boolean;
-    rootElement: Document | HTMLElement;
-    colorByPixelType: ColorByPixelType;
-    weightByComponentName: WeightByComponentName;
-    shouldIgnoreContainer: ShouldIgnoreContainer;
+    rootElement: HTMLElement;
+    getComponentData: GetComponentData<Element>;
     requestIdleCallbackFunc: RequestIdleCallback;
     stopVisualCoverageCalculation: () => boolean;
-} & (
-    | {
-          drawAndAppendSvg: false;
-      }
-    | {
-          drawAndAppendSvg: true;
-          svgContainer: HTMLElement;
-      }
-);
+    getContainerData: GetContainerData<Element> | undefined;
+    coverageContainersDataAttribute: CoverageContainerDataAttribute | undefined;
+};
 
 export function calculateDsVisualCoverages(params: Params): void {
     const {
         logger,
         onError,
-        userType,
         onComplete,
         rootElement,
-        printAsciiArt,
-        colorByPixelType,
-        weightByComponentName,
-        shouldIgnoreContainer,
+        getComponentData,
+        getContainerData,
         requestIdleCallbackFunc,
         stopVisualCoverageCalculation,
+        coverageContainersDataAttribute,
     } = params;
 
     const start = Date.now();
@@ -58,7 +47,8 @@ export function calculateDsVisualCoverages(params: Params): void {
     const dsVisualCoverageContainersData = getCoverageContainersData({
         logger,
         rootElement,
-        shouldIgnoreContainer,
+        getContainerData,
+        coverageContainersDataAttribute,
     });
 
     if (dsVisualCoverageContainersData.length === 0) {
@@ -70,10 +60,10 @@ export function calculateDsVisualCoverages(params: Params): void {
         return;
     }
 
-    logger('🎬 Calculation start');
+    logger.log('🎬 Calculation start');
 
     if (stopVisualCoverageCalculation()) {
-        logger('❌ Is outdated (pre run)');
+        logger.warn('Coverage calculation is outdated (pre run)');
         onComplete({
             stopped: true,
             totalDuration: -1,
@@ -83,77 +73,60 @@ export function calculateDsVisualCoverages(params: Params): void {
     }
 
     const results: DsVisualCoverageDeNormalizedResult[] = [];
+    const analyzedContainers = new Set(dsVisualCoverageContainersData);
     dsVisualCoverageContainersData.forEach(dsVisualCoverageContainerData => {
-        const { elementRect, domElement } = dsVisualCoverageContainerData;
-
-        let svgRenderer: SVGSVGElement | undefined;
-        if (params.drawAndAppendSvg) {
-            const { top, left, width, height } = getRectCoordinates(elementRect);
-
-            // By passing an svg, the element's rect will be added there and we can visualize them by adding the svg to the page
-            svgRenderer = globalThis.document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            svgRenderer.setAttribute('width', (left + width).toString());
-            svgRenderer.setAttribute('height', (top + height).toString());
-            svgRenderer.style.position = 'absolute';
-            svgRenderer.style.zIndex = '2147483647'; // That's 32-bit integer max value, see https://stackoverflow.com/a/491105
-            svgRenderer.style.top = '0';
-            svgRenderer.style.left = '0';
-            svgRenderer.style.pointerEvents = 'none';
-            svgRenderer.setAttribute(
-                svgRendererAttributeName,
-                dsVisualCoverageContainerData.coverageContainerAttributeValue,
-            );
-
-            params.svgContainer.appendChild(svgRenderer);
-        }
-
-        logger('Container', domElement);
+        const { domElement, attributeValue } = dsVisualCoverageContainerData;
+        const coverageContainer = getOpeningHtmlTag(domElement);
 
         calculateDsVisualCoverage({
             logger,
-            userType,
-            svgRenderer,
-            printAsciiArt,
-            colorByPixelType,
-            weightByComponentName,
+            getComponentData,
             requestIdleCallbackFunc,
             dsVisualCoverageContainerData,
             stopVisualCoverageCalculation,
+            coverageContainersDataAttribute,
         })
             .then(result => {
+                analyzedContainers.delete(dsVisualCoverageContainerData);
+
                 results.push(
                     getDenormalizedCoverageResult({
                         result,
-                        dsVisualCoverageContainerData,
+                        debugInfo: coverageContainer,
+                        coverageContainerAttributeValue: attributeValue,
                     }),
                 );
-                if (results.length !== dsVisualCoverageContainersData.length) return;
 
-                logger('🏁 Calculation end');
-                const meaningfulResults = filterOutEmptyContainers({ results, logger });
-                meaningfulResults.forEach(r => {
-                    const percentage = `${r.coverage.toFixed(2)} %`;
-                    logger(`Component: ${r.component} - Team: ${r.team} - Coverage: ${percentage}`);
+                if (analyzedContainers.size !== 0) return;
+
+                logger.log('🏁 Calculation end');
+
+                addEmptyContainersWarnings({ mutableResults: results });
+                results.forEach(r => {
+                    r.warnings = removeRedundantWarnings({ warnings: r.warnings });
+                    if (r.warnings.length > 0) {
+                        logger.warn(`Container: ${r.debugInfo} - Warnings: ${r.warnings}`);
+                    } else {
+                        const percentage = `${r.coverage.toFixed(2)} %`;
+                        logger.log(`Container: ${r.debugInfo} - Coverage: ${percentage}`);
+                    }
                 });
 
                 onComplete({
                     stopped: false,
                     totalDuration: Date.now() - start,
-                    dsVisualCoverageResults: meaningfulResults,
+                    dsVisualCoverageResults: results,
                 });
             })
             .catch((error: unknown) => {
-                const { team, component } = dsVisualCoverageContainerData.coverageContainer;
+                analyzedContainers.delete(dsVisualCoverageContainerData);
 
-                const newError = new DsVisualCoverageError(
-                    {
-                        team,
-                        component,
-                        userType,
-                        stopReason: 'unknownStopReason',
-                    },
-                    error instanceof Error ? error.message : `${error}`,
-                );
+                const newError = new DsVisualCoverageError({
+                    platform: 'web',
+                    stopReason: 'unknownStopReason',
+                    debugInfo: attributeValue ?? nullAttributeValue,
+                    message: error instanceof Error ? error.message : `${error}`,
+                });
 
                 // If you want to keep the original stack trace:
                 newError.stack = error instanceof Error ? (error.stack ?? '') : '';

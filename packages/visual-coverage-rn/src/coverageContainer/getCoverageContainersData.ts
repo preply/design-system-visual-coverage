@@ -1,25 +1,31 @@
-import type { CoverageContainer, Logger, Rect } from '@preply/ds-visual-coverage-core';
+import type {
+    Rect,
+    Logger,
+    GetContainerData,
+    CoverageContainer,
+} from '@preply/ds-visual-coverage-core';
 import { createRect } from '@preply/ds-visual-coverage-core';
 
 import type {
-    AccessibilityIdentifier,
     RootSwiftView,
-    ShouldIgnoreContainer,
+    ViewMeasurement,
     ViewMeasurements,
+    AccessibilityIdentifier,
 } from '../types';
 
 import { getCoverageContainers } from './getCoverageContainers';
-import { parseCoverageContainerAccessibilityIdentifier } from './parseCoverageContainerAccessibilityIdentifier';
 
 type Params = {
     logger: Logger;
     mutableRootSwiftView: RootSwiftView;
-    shouldIgnoreContainer: ShouldIgnoreContainer;
+    getContainerData: GetContainerData<ViewMeasurement>;
 };
 
 export type DsVisualCoverageContainerData = {
     elementRect: Rect;
+    instanceOf: string;
     children: ViewMeasurements;
+    accessibilityLabel: string;
     coverageContainer: CoverageContainer;
     coverageContainerAccessibilityIdentifier: AccessibilityIdentifier;
 };
@@ -27,11 +33,11 @@ export type DsVisualCoverageContainerData = {
 type Return = Array<DsVisualCoverageContainerData>;
 
 export function getCoverageContainersData(params: Params): Return {
-    const { logger, mutableRootSwiftView, shouldIgnoreContainer } = params;
+    const { logger, mutableRootSwiftView, getContainerData } = params;
 
     const coverageContainers = getCoverageContainers({
         logger,
-        shouldIgnoreContainer,
+        getContainerData,
         viewMeasurements: mutableRootSwiftView.children,
     });
 
@@ -48,10 +54,11 @@ export function getCoverageContainersData(params: Params): Return {
         return {
             children: coverageContainer.children,
             elementRect,
-            coverageContainer: parseCoverageContainerAccessibilityIdentifier(
-                coverageContainerAccessibilityIdentifier,
-            ),
             coverageContainerAccessibilityIdentifier,
+            instanceOf: coverageContainer.instanceOf,
+            accessibilityLabel: coverageContainer.accessibilityLabel,
+            // TODO: is this duplicate useful for RN?
+            coverageContainer: coverageContainerAccessibilityIdentifier,
         };
     });
 
