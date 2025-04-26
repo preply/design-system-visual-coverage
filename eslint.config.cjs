@@ -15,7 +15,6 @@ const tsParser = require('@typescript-eslint/parser');
 const vitest = require('eslint-plugin-vitest');
 const serverComponents = require('eslint-plugin-react-server-components');
 const formatjs = require('eslint-plugin-formatjs');
-const intlForceIdPrefix = require('@preply/ds-eslint-plugin-intl-force-id-prefix');
 
 const compat = new FlatCompat();
 
@@ -93,7 +92,6 @@ module.exports = ts.config(
         ignores: ['**/*.test.{ts,tsx,js,jsx}', '**/docs/**', '*.stories.tsx'],
         plugins: {
             'react-server-components': fixupPluginRules(serverComponents),
-            'force-intl-id-prefix': intlForceIdPrefix,
         },
         rules: {
             ...serverComponents.configs.recommended.rules,
