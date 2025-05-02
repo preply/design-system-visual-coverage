@@ -6,6 +6,7 @@ import svgr from 'vite-plugin-svgr';
 import { defineConfig } from 'vitest/config';
 
 export const browserTestGlob = '**/*.browser.test.?(c|m)[jt]s?(x)';
+export const reactBrowserTestGlob = '**/*.react.browser.test.?(c|m)[jt]s?(x)'; // automatically included in browserTestGlob
 
 export default defineConfig({
     plugins: [
@@ -22,7 +23,6 @@ export default defineConfig({
     test: {
         // Browser tests must be run in a browser environment, not the default jsdom.
         exclude: [browserTestGlob],
-        environment: 'jsdom',
         globals: true,
         setupFiles: [path.join(__dirname, './vitest.setup.ts')],
         coverage: {

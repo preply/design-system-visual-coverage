@@ -7,22 +7,25 @@ const loggerStub = createLogger(false);
 
 const intermediateSwiftViewStub: ChildData = {
     dsComponentName: null,
-    dsComponentType: 'nonDsComponent',
-    isChildOfUiDsComponent: false,
     rect: createRect({ top: 0, left: 0, width: 0, height: 0 }),
+    debugInfo: '',
+    weight: 0,
+    debugColor: 'red',
 };
 const layoutDsComponentStub: ChildData = {
     dsComponentName: 'LayoutFlex',
-    dsComponentType: 'layoutDsComponent',
-    isChildOfUiDsComponent: false,
     rect: createRect({ top: 0, left: 0, width: 0, height: 0 }),
+    debugInfo: 'ParentComponent-dsCoverage:dsComponent:LayoutFlex',
+    weight: 0,
+    debugColor: 'green',
 };
 
 const uiDsComponentStub: ChildData = {
     dsComponentName: 'Button',
-    dsComponentType: 'uiDsComponent',
-    isChildOfUiDsComponent: false,
     rect: createRect({ top: 0, left: 0, width: 0, height: 0 }),
+    debugInfo: 'ParentComponent-dsCoverage:dsComponent:Button',
+    weight: 21,
+    debugColor: 'green',
 };
 
 describe('filterOutIntermediateChildren', () => {

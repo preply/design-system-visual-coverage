@@ -1,3 +1,4 @@
+import type { GetContainerData } from '@preply/ds-visual-coverage-core';
 import { createLogger } from '@preply/ds-visual-coverage-core';
 
 import type { ViewMeasurement, ViewMeasurements } from '../types';
@@ -22,7 +23,7 @@ const mainCoverageContainerStub: ViewMeasurement = {
     width: 0,
     height: 0,
     accessibilityLabel: '',
-    accessibilityIdentifier: `Main-dsCoverage:coverageContainer:{"team":"app-core","component":"Main"}`,
+    accessibilityIdentifier: `Main-dsCoverage:coverageContainer:Main`,
     instanceOf: '',
     children: [],
 };
@@ -32,7 +33,7 @@ const parentContainerStub: ViewMeasurement = {
     width: 0,
     height: 0,
     accessibilityLabel: '',
-    accessibilityIdentifier: `ParentComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ParentComponent"}`,
+    accessibilityIdentifier: `ParentComponent-dsCoverage:coverageContainer:ParentComponent`,
     instanceOf: '',
     children: [],
 };
@@ -42,9 +43,34 @@ const childContainerStub: ViewMeasurement = {
     width: 0,
     height: 0,
     accessibilityLabel: '',
-    accessibilityIdentifier: `ChildComponent-dsCoverage:coverageContainer:{"team":"app-core","component":"ChildComponent"}`,
+    accessibilityIdentifier: `ChildComponent-dsCoverage:coverageContainer:ChildComponent`,
     instanceOf: '',
     children: [],
+};
+
+const getContainerDataStub: GetContainerData<ViewMeasurement> = ({ component }) => {
+    if (!component.accessibilityIdentifier) {
+        return { result: 'isNotCoverageContainer' };
+    }
+
+    if (!component.accessibilityIdentifier.includes('-dsCoverage:coverageContainer:')) {
+        return { result: 'isNotCoverageContainer' };
+    }
+
+    const coverageContainer = component.accessibilityIdentifier.split(
+        '-dsCoverage:coverageContainer',
+    )[1];
+
+    if (!coverageContainer) {
+        return {
+            result: 'isNotCoverageContainer',
+        };
+    }
+
+    return {
+        result: 'isCoverageContainer',
+        coverageContainer,
+    };
 };
 
 describe('getCoverageContainers', () => {
@@ -82,7 +108,7 @@ describe('getCoverageContainers', () => {
             const result = getCoverageContainers({
                 logger: loggerStub,
                 viewMeasurements,
-                shouldIgnoreContainer: () => false,
+                getContainerData: getContainerDataStub,
             });
 
             // Assert
@@ -112,7 +138,7 @@ describe('getCoverageContainers', () => {
             const result = getCoverageContainers({
                 logger: loggerStub,
                 viewMeasurements,
-                shouldIgnoreContainer: () => false,
+                getContainerData: getContainerDataStub,
             });
 
             // Assert
@@ -194,7 +220,7 @@ describe('getCoverageContainers', () => {
             const result = getCoverageContainers({
                 logger: loggerStub,
                 viewMeasurements,
-                shouldIgnoreContainer: () => false,
+                getContainerData: getContainerDataStub,
             });
 
             // Assert

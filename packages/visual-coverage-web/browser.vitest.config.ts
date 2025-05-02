@@ -15,9 +15,12 @@ export default defineConfig({
         browser: {
             provider: 'playwright', // or 'webdriverio'
             enabled: true,
-            name: 'chromium', // browser name is required
-            // https://playwright.dev
-            providerOptions: {},
+            instances: [
+                {
+                    browser: 'chromium',
+                    name: 'chromium',
+                },
+            ],
         },
         coverage: {
             provider: 'istanbul',

@@ -1,53 +1,88 @@
 import { createBitmap } from '../bitmap/createBitmap';
-import { logBitmap } from '../bitmap/logBitmap';
 import { setBitmapPixel } from '../bitmap/setBitmapPixel';
 import { getRectCoordinate } from '../rect/rectProperties';
-import type {
-    Bitmap,
-    ChildData,
-    ComponentType,
-    Logger,
-    Milliseconds,
-    PixelByPixelType,
-    PixelCounts,
-    Rect,
-    WeightByComponentName,
-} from '../types';
+import type { Rect, Bitmap, ChildData, PixelCounts, Milliseconds } from '../types';
 
 import { createPixelCounts } from './createPixelCounts';
 
 type Params = {
-    logger: Logger;
     elementRect: Rect;
-    printAsciiArt: boolean;
     childrenData: ChildData[];
-    pixelByPixelType: PixelByPixelType;
     offset: { top: number; left: number };
-    weightByComponentName: WeightByComponentName;
 };
 
 type CountPixelsResult = {
     bitmap: Bitmap;
-    pixelCounts: PixelCounts;
     duration: Milliseconds;
+    pixelCounts: PixelCounts;
+
+    // Tells the consumer what numbers have been used for every component name, useful to
+    // post-process the bitmap independently
+    pixelByComponentName: Record<string, number>;
+
+    // Tells the consumer what number has been used for the non-DS components pixels, useful to
+    // post-process the bitmap independently
+    nonDsComponentsPixel: number;
 };
 
 export function countPixels(params: Params): CountPixelsResult {
-    const {
-        logger,
-        offset,
-        elementRect,
-        childrenData,
-        printAsciiArt,
-        pixelByPixelType,
-        weightByComponentName,
-    } = params;
+    const { offset, elementRect, childrenData } = params;
 
     const start: Milliseconds = Date.now();
+
+    const allComponentNames = childrenData.map(child => child.dsComponentName);
+    const uniqueComponentNames = [...new Set(allComponentNames)];
+
+    // `uniqueComponentNames` could be ['Heading', 'Button', null, 'Dropdown']. `null` should
+    // not create gaps in the index.
+    let dsComponentsIndex = 0;
+    let nonDsComponentsPixel = 1;
+
+    let pixelByComponentName = uniqueComponentNames.reduce<Record<string, number>>(
+        (acc, dsComponentName) => {
+            if (dsComponentName && acc[dsComponentName] === undefined) {
+                acc[dsComponentName] = dsComponentsIndex;
+                dsComponentsIndex++;
+                nonDsComponentsPixel++;
+            }
+
+            return acc;
+        },
+        {},
+    );
+
+    // Example
+    // {
+    //   Heading: 1,
+    //   Button: 2,
+    //   Dropdown: 3
+    // }
+    //
+    // The numbers will be used to fill up the bitmap. 0 can't be used because it represents
+    // an empty pixel.
+    pixelByComponentName = Object.keys(pixelByComponentName).reduce<Record<string, number>>(
+        (acc, key) => {
+            const pixel = pixelByComponentName[key];
+            if (pixel === undefined)
+                throw new Error(`No pixel at ${key} (this should be a TS-only protection)`);
+
+            // 0 is a reserved pixel in the bitmap. 0 is what uint arrays gives back when you read
+            // an empty cell and it's used for empty pixels
+            acc[key] = pixel + 1;
+
+            return acc;
+        },
+        {},
+    );
+    // With the above example of `pixelByComponentName`, nonDsComponentsPixel is 4. And it's
+    // the pixel used to mark the non-DS components, which are the ones with `dsComponentName`
+    // set to `null`
+    nonDsComponentsPixel++;
 
     const bitmap = createBitmap(
         getRectCoordinate(elementRect, 'height'),
         getRectCoordinate(elementRect, 'width'),
+        nonDsComponentsPixel,
     );
 
     for (let i = 0, n = childrenData.length; i < n; i++) {
@@ -55,13 +90,19 @@ export function countPixels(params: Params): CountPixelsResult {
         if (!childData)
             throw new Error(`No childData at ${i} (this should be a TS-only protection)`);
 
-        const { rect, dsComponentType, isChildOfUiDsComponent, dsComponentName } = childData;
+        const { rect, dsComponentName } = childData;
 
-        const adjustedSsComponentType: ComponentType = isChildOfUiDsComponent
-            ? 'unknownDsComponent' // children of ui components are treated as DS components too
-            : dsComponentType;
+        let pixel = nonDsComponentsPixel;
+        if (dsComponentName !== null) {
+            const dsComponentNamePixel = pixelByComponentName[dsComponentName];
 
-        const pixel = pixelByPixelType[adjustedSsComponentType];
+            if (dsComponentNamePixel === undefined)
+                throw new Error(
+                    `No dsComponentNamePixel for ${dsComponentName} (this should be a TS-only protection)`,
+                );
+
+            pixel = dsComponentNamePixel;
+        }
 
         const offsetTop = offset.top;
         const offsetLeft = offset.left;
@@ -73,13 +114,11 @@ export function countPixels(params: Params): CountPixelsResult {
         const rowLength = getRectCoordinate(elementRect, 'height');
         const columnLength = getRectCoordinate(elementRect, 'width');
 
-        const weight = weightByComponentName[dsComponentName ?? 'nonDsComponent'];
-
-        if (weight === undefined) {
+        if (childData.weight === undefined) {
             throw new Error(`No weight for ${elementRect} (this should be a TS-only protection)`);
         }
 
-        for (let weightLine = 0; weightLine < weight; weightLine++) {
+        for (let weightLine = 0; weightLine < childData.weight; weightLine++) {
             // "Draw" the rows in bitmap
             const top = Math.floor(rectTop - offsetTop + weightLine);
             const bottom = Math.floor(rectTop - offsetTop + rectHeight - 1 - weightLine);
@@ -259,7 +298,7 @@ export function countPixels(params: Params): CountPixelsResult {
         }
     }
 
-    const pixelCounts = createPixelCounts();
+    const pixelCounts = createPixelCounts(nonDsComponentsPixel);
     for (let i = 0, n = bitmap.length; i < n; i++) {
         const pixelAsNumber = bitmap[i];
         if (pixelAsNumber === undefined) {
@@ -268,17 +307,11 @@ export function countPixels(params: Params): CountPixelsResult {
         pixelCounts[pixelAsNumber]++;
     }
 
-    if (printAsciiArt) {
-        logBitmap({
-            logger,
-            bitmap,
-            width: getRectCoordinate(elementRect, 'width'),
-        });
-    }
-
     return {
         bitmap,
         pixelCounts,
+        nonDsComponentsPixel,
+        pixelByComponentName,
         duration: Date.now() - start,
     };
 }

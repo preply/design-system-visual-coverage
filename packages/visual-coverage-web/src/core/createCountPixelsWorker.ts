@@ -8,26 +8,17 @@
 // 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 // 🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨
 
-import type {
-    Bitmap,
-    ChildData,
-    ComponentType,
-    HighestNumber,
-    Logger,
-    Pixel,
-    PixelCounts,
-    ReadableCharByPixel,
-    Rect,
-    WeightByComponentName,
-} from '@preply/ds-visual-coverage-core';
+import type { Bitmap, ChildData, Pixel, PixelCounts, Rect } from '@preply/ds-visual-coverage-core';
 
 export type Params = {
     log: boolean;
     elementRect: Rect;
-    printAsciiArt: boolean;
     childrenData: ChildData[];
     offset: { top: number; left: number };
-    weightByComponentName: WeightByComponentName;
+
+    // Useful for debugging purposes. Please consider it slows down the serialization process between
+    // the threads
+    returnBitmap: boolean;
 };
 
 export type CountPixelsWorkerEvent =
@@ -35,29 +26,38 @@ export type CountPixelsWorkerEvent =
           status: 'complete';
           data: {
               pixelCounts: PixelCounts;
+
+              // Tells the consumer what numbers have been used for every component name, useful to
+              // post-process the bitmap independently
+              pixelByComponentName: Record<string, number>;
+
+              // Tells the consumer what number has been used for the non-DS components pixels, useful to
+              // post-process the bitmap independently
+              nonDsComponentsPixel: number;
+
+              // It's returned when passed with `returnBitmap: true`
+              bitmap: Bitmap | null;
           };
       }
-    | { status: 'error'; error: unknown };
+    | { status: 'error'; error: unknown }
+    | { status: 'logOnMainThread'; data: unknown };
 
 export function createCountPixelsWorker(): Worker {
     // Defining function which will be used as Web Worker
 
-    //  TODO: fix it
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const workerFn = (self: any) => {
         // Listening to messages from Main Thread
 
         self.onmessage = function onWorkerMessage(e: { data: Params }) {
-            const { log, offset, elementRect, childrenData, printAsciiArt, weightByComponentName } =
-                e.data;
+            const { offset, elementRect, childrenData, returnBitmap } = e.data;
 
             // --------------------------------------------------
             // UTILS
             // 🚨🚨🚨 the following functions are duplicated from other homonymous functions of this feature 🚨🚨🚨
             // --------------------------------------------------
 
-            function createPixelCounts(): PixelCounts {
-                const length: HighestNumber = 4;
+            function createPixelCounts(length: number): PixelCounts {
                 const pixelCounts = new Uint32Array(length + 1);
 
                 return pixelCounts;
@@ -72,10 +72,14 @@ export function createCountPixelsWorker(): Worker {
                 throw new Error(`Invalid property: ${property}`);
             }
 
-            function createBitmap(width: number, height: number) {
-                const bitmap: Bitmap = new Uint8Array(Math.floor(width) * Math.floor(height));
+            function createBitmap(width: number, height: number, highestPixel: number): Bitmap {
+                if (highestPixel <= 255)
+                    return new Uint8Array(Math.floor(width) * Math.floor(height));
 
-                return bitmap;
+                if (highestPixel <= 65_535)
+                    return new Uint16Array(Math.floor(width) * Math.floor(height));
+
+                return new Uint32Array(Math.floor(width) * Math.floor(height));
             }
 
             function setBitmapPixel({
@@ -94,81 +98,58 @@ export function createCountPixelsWorker(): Worker {
                 vP[top * width + left] = value;
             }
 
-            function workerLogger(...args: unknown[]) {
-                const dsName = 'preply';
+            const allComponentNames = childrenData.map(child => child.dsComponentName);
+            const uniqueComponentNames = [...new Set(allComponentNames)];
 
-                console.log(
-                    `%c ${dsName} coverage `,
-                    'background: #FF7AAC; color: #121117; padding: 2px; border-radius: 2px;',
-                    ...args,
-                );
-            }
-
-            const createWorkerLogger = (logIsEnabled: boolean) =>
-                logIsEnabled ? workerLogger : () => {};
-
-            const defaultReadableCharByPixelType: ReadableCharByPixel = {
-                0: '⬛️',
-                1: '🟥',
-                2: '🟩',
-
-                // DS components
-                3: '🟩',
-                4: '🟩',
-            };
-
-            function getReadableBitmap(params: {
-                width: number;
-                bitmap: Bitmap;
-                readableCharByPixelType?: ReadableCharByPixel;
-            }): string {
-                const {
-                    width,
-                    bitmap,
-                    readableCharByPixelType = defaultReadableCharByPixelType,
-                } = params;
-                let string = '';
-
-                for (let i = 0; i < bitmap.length; i++) {
-                    if (i % width === 0) {
-                        string += '\n';
+            // `uniqueComponentNames` could be ['Heading', 'Button', null, 'Dropdown']. `null` should
+            // not create gaps in the index.
+            let dsComponentsIndex = 0;
+            let nonDsComponentsPixel = 1;
+            let pixelByComponentName = uniqueComponentNames.reduce<Record<string, number>>(
+                (acc, dsComponentName) => {
+                    if (dsComponentName && acc[dsComponentName] === undefined) {
+                        acc[dsComponentName] = dsComponentsIndex;
+                        dsComponentsIndex++;
+                        nonDsComponentsPixel++;
                     }
 
-                    const pixelAsNumber = bitmap[i];
-                    if (pixelAsNumber === undefined) {
-                        throw new Error(`No pixel at ${i} (this should be a TS-only protection)`);
-                    }
-                    const pixel = pixelAsNumber.toString();
+                    return acc;
+                },
+                {},
+            );
 
-                    const printedPixel = readableCharByPixelType[pixel];
+            // Example
+            // {
+            //   Heading: 1,
+            //   Button: 2,
+            //   Dropdown: 3
+            // }
+            //
+            // The numbers will be used to fill up the bitmap. 0 can't be used because it represents
+            // an empty pixel.
+            pixelByComponentName = Object.keys(pixelByComponentName).reduce<Record<string, number>>(
+                (acc, key) => {
+                    const pixel = pixelByComponentName[key];
+                    if (pixel === undefined)
+                        throw new Error(`No pixel at ${key} (this should be a TS-only protection)`);
 
-                    string += printedPixel;
-                }
+                    // 0 is a reserved pixel in the bitmap. 0 is what uint arrays gives back when you read
+                    // an empty cell and it's used for empty pixels
+                    acc[key] = pixel + 1;
 
-                return string;
-            }
-
-            function logBitmap(params: { width: number; logger: Logger; bitmap: Bitmap }) {
-                const { width, logger, bitmap } = params;
-
-                logger(getReadableBitmap({ width, bitmap }));
-            }
-
-            const pixelByComponentType: Record<ComponentType, Pixel> = {
-                nonDsComponent: 1,
-                uiDsComponent: 2,
-                layoutDsComponent: 3,
-                unknownDsComponent: 4,
-            };
-
-            // --------------------------------------------------
-            // --------------------------------------------------
-
-            const logger = createWorkerLogger(log);
+                    return acc;
+                },
+                {},
+            );
+            // With the above example of `pixelByComponentName`, nonDsComponentsPixel is 4. And it's
+            // the pixel used to mark the non-DS components, which are the ones with `dsComponentName`
+            // set to `null`
+            nonDsComponentsPixel++;
 
             const bitmap = createBitmap(
                 getRectProperty(elementRect, 'width'),
                 getRectProperty(elementRect, 'height'),
+                nonDsComponentsPixel,
             );
 
             try {
@@ -179,14 +160,19 @@ export function createCountPixelsWorker(): Worker {
                             `No childData at ${i} (this should be a TS-only protection)`,
                         );
 
-                    const { rect, dsComponentType, isChildOfUiDsComponent, dsComponentName } =
-                        childData;
+                    const { rect, dsComponentName } = childData;
 
-                    const adjustedSsComponentType: ComponentType = isChildOfUiDsComponent
-                        ? 'unknownDsComponent' // children of ui components are treated as DS components too
-                        : dsComponentType;
+                    let pixel = nonDsComponentsPixel;
+                    if (dsComponentName !== null) {
+                        const dsComponentNamePixel = pixelByComponentName[dsComponentName];
 
-                    const pixel = pixelByComponentType[adjustedSsComponentType];
+                        if (dsComponentNamePixel === undefined)
+                            throw new Error(
+                                `No dsComponentNamePixel for ${dsComponentName} (this should be a TS-only protection)`,
+                            );
+
+                        pixel = dsComponentNamePixel;
+                    }
 
                     const offsetTop = offset.top;
                     const offsetLeft = offset.left;
@@ -198,7 +184,7 @@ export function createCountPixelsWorker(): Worker {
                     const rowLength = getRectProperty(elementRect, 'height');
                     const columnLength = getRectProperty(elementRect, 'width');
 
-                    const weight = weightByComponentName[dsComponentName ?? 'nonDsComponent'];
+                    const weight = childData.weight;
                     if (weight === undefined) {
                         throw new Error(
                             `No weight for ${dsComponentName} (this should be a TS-only protection)`,
@@ -386,7 +372,7 @@ export function createCountPixelsWorker(): Worker {
                     }
                 }
 
-                const pixelCounts = createPixelCounts();
+                const pixelCounts = createPixelCounts(nonDsComponentsPixel);
                 for (let i = 0, n = bitmap.length; i < n; i++) {
                     const pixelAsNumber = bitmap[i];
                     if (pixelAsNumber === undefined) {
@@ -395,18 +381,28 @@ export function createCountPixelsWorker(): Worker {
                     pixelCounts[pixelAsNumber]++;
                 }
 
-                if (printAsciiArt) {
-                    logBitmap({
-                        logger,
-                        bitmap,
-                        width: getRectProperty(elementRect, 'width'),
-                    });
-                }
+                // if (printAsciiArt) {
+                //     logBitmap({
+                //         logger,
+                //         bitmap,
+                //         width: getRectProperty(elementRect, 'width'),
+                //     });
+                // }
 
                 const event: CountPixelsWorkerEvent = {
                     status: 'complete',
                     data: {
                         pixelCounts,
+                        // Tells the consumer what numbers have been used for every component name, useful to
+                        // post-process the bitmap independently
+                        pixelByComponentName,
+
+                        // Tells the consumer what number has been used for the non-DS components pixels, useful to
+                        // post-process the bitmap independently
+                        nonDsComponentsPixel,
+
+                        // It's returned when passed with `returnBitmap: true`
+                        bitmap: returnBitmap ? bitmap : null,
                     },
                 };
 

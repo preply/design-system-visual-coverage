@@ -1,11 +1,13 @@
 import * as Sentry from '@sentry/browser';
 import {
     createCalculateDsVisualCoverages,
-    exposeGlobalDsVisualCoverageObject,
+    createGetContainerData,
     isLogQueryParamSet,
-    DsVisualCoverageWarning
-} from '@preply/ds-visual-coverage-web';
-import { createLogger, DsVisualCoverageRunResult, DsVisualCoverageDeNormalizedResult } from '@preply/ds-visual-coverage-core';
+} from '@preply/ds-visual-coverage-preply-web';
+import { DsVisualCoverageWarning } from '@preply/ds-visual-coverage-preply';
+import { createLogger } from '@preply/ds-visual-coverage-core';
+import type { PreplyDsVisualCoverageRunResult } from '@preply/ds-visual-coverage-preply';
+import type { PreplyDsVisualCoverageDeNormalizedResult } from '@preply/ds-visual-coverage-preply/dist/types';
 import type { DWHEvent, UserType } from './utils/convertDsCoverageToDwhEvent';
 
 import { defaultCheckInterval, defaultIsTimeToRun } from './core/defaultIsTimeToRun';
@@ -26,7 +28,7 @@ type Params = {
 
 const noop = () => {};
 
-function sendDWHEventInAsyncBatch(_events:DWHEvent|DWHEvent[]){
+function sendDWHEventInAsyncBatch(_events: DWHEvent | DWHEvent[]) {
     // custom implementation to send the events to the custom DataDog endpoint
 }
 
@@ -52,7 +54,7 @@ export function initDsVisualCoverageInProd(params: Params) {
         });
     }
 
-    function trackWarning(result: DsVisualCoverageDeNormalizedResult) {
+    function trackWarning(result: PreplyDsVisualCoverageDeNormalizedResult) {
         logger.warn(result);
 
         const warningEvent = generateDsCoverageWarning({ userType: params.userType, result });
@@ -61,15 +63,15 @@ export function initDsVisualCoverageInProd(params: Params) {
         Sentry.withScope(scope => {
             scope.setLevel(Sentry.Severity.Warning);
             scope.setTag('dsVisualCoverage', 'web');
-            const warning = new DsVisualCoverageWarning(
-                {
-                    userType: params.userType,
+            const warning = new DsVisualCoverageWarning({
+                dsVisualCoverageData: {
                     warning: result.warnings.join(','),
                     team: result.team,
                     component: result.component,
                 },
-                `${result.warnings.join(',')}-web-${result.component}-${result.team}`,
-            );
+                platform: 'web',
+                message: `${result.warnings.join(',')}-web-${result.component}-${result.team}`,
+            });
             Sentry.captureException(warning);
         });
     }
@@ -84,7 +86,7 @@ export function initDsVisualCoverageInProd(params: Params) {
 
                 createCalculateDsVisualCoveragesResult?.run({
                     onError: trackError,
-                    onComplete: (result: DsVisualCoverageRunResult) => {
+                    onComplete: (result: PreplyDsVisualCoverageRunResult) => {
                         const resultConverter = convertDsCoverageToDwhEvent(params.userType);
 
                         const resultWithoutWarnings = result.dsVisualCoverageResults.filter(
@@ -136,9 +138,7 @@ export function initDsVisualCoverageInProd(params: Params) {
 
         createCalculateDsVisualCoveragesResult = createCalculateDsVisualCoverages({
             log: false,
-            printAsciiArt: false,
-            drawAndAppendSvg: false,
-            userType: params.userType,
+            getContainerData: createGetContainerData(),
         });
 
         return {

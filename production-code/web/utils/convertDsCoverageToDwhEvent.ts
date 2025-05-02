@@ -1,10 +1,9 @@
-import type { DsVisualCoverageDeNormalizedResult } from '@preply/ds-visual-coverage-core';
-import { DsVisualCoverageError } from '@preply/ds-visual-coverage-web';
+import { DsVisualCoverageError } from '@preply/ds-visual-coverage-preply';
+import type { PreplyDsVisualCoverageDeNormalizedResult } from '@preply/ds-visual-coverage-preply/dist/types'; // TODO: fix it when the DS will export the type, likely with every 1.4.2+ version
 import type { PreplyGitHubTeam } from '../platform/constants';
-import { getPixelCountByComponentType } from './getPixelCountByComponentType';
 
 export enum DWHEventType {
-    EVENT_TYPE_CUSTOM = 13
+    EVENT_TYPE_CUSTOM = 13,
 }
 
 export type DWHEvent = {
@@ -42,6 +41,7 @@ export type DsCoverageSingleContainerRuntimeInfo = {
     json_data: {
         team: TeamName;
         component: string;
+        rawCoverageHtmlAttribute: string;
         duration: {
             totalDuration: Milliseconds;
             blockingDuration: Milliseconds;
@@ -65,7 +65,6 @@ export type DsCoverageAllContainersRuntimeInfo = {
 export type DsCoverageCount = {
     event_name: Version;
     event_type: 13;
-    param1: 'write_disable';
     json_data: {
         team: TeamName;
         pixels: number;
@@ -122,148 +121,102 @@ type EventData = [
     DsCoverageCount,
 ];
 
-export const convertDsCoverageToDwhEvent = (userType: UserType) => (
-    result: DsVisualCoverageDeNormalizedResult,
-): DWHEvent[] => {
-    const { pixelCounts } = result;
+export const convertDsCoverageToDwhEvent =
+    (userType: UserType) =>
+    (result: PreplyDsVisualCoverageDeNormalizedResult): DWHEvent[] => {
+        const { readablePixelCountsByComponentType } = result;
 
-    const events: EventData = [
-        {
-            event_name: 'ds_coverage_single_container_runtime_info',
-            event_type: 13,
-            json_data: {
-                team: result.team,
-                component: result.component,
-                duration: {
-                    totalDuration: result.totalDuration,
-                    blockingDuration: result.duration.blockingDuration,
-                    nonBlockingDuration: result.duration.nonBlockingDuration,
-                    countPixelsDuration: result.duration.countPixelsDuration,
-                    loopOverDomChildrenDuration: result.duration.loopOverDomChildrenDuration,
+        const events: EventData = [
+            {
+                event_name: 'ds_coverage_single_container_runtime_info',
+                event_type: 13,
+                json_data: {
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    component: result.component,
+                    duration: {
+                        totalDuration: result.totalDuration,
+                        blockingDuration: result.duration.blockingDuration,
+                        nonBlockingDuration: result.duration.nonBlockingDuration,
+                        countPixelsDuration: result.duration.countPixelsDuration,
+                        loopOverDomChildrenDuration: result.duration.loopOverDomChildrenDuration,
+                    },
                 },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'leaf',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'uiDsComponent',
-                    pixelCounts,
-                }),
+            {
+                event_name: 'ds_coverage_v1',
+                event_type: 13,
+                json_data: {
+                    platform: 'web',
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    userType,
+                    component: result.component,
+                    type: 'leaf',
+                    pixels: readablePixelCountsByComponentType.uiDsComponent,
+                },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'layout',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'layoutDsComponent',
-                    pixelCounts,
-                }),
+            {
+                event_name: 'ds_coverage_v1',
+                event_type: 13,
+                json_data: {
+                    platform: 'web',
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    userType,
+                    component: result.component,
+                    type: 'outdated',
+                    pixels: readablePixelCountsByComponentType.outdatedDsComponent,
+                },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'util',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'utilDsComponent',
-                    pixelCounts,
-                }),
+            {
+                event_name: 'ds_coverage_v1',
+                event_type: 13,
+                json_data: {
+                    platform: 'web',
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    userType,
+                    component: result.component,
+                    type: 'rebrand',
+                    pixels: readablePixelCountsByComponentType.rebrandComponent,
+                },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'outdated',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'outdatedDsComponent',
-                    pixelCounts,
-                }),
+            {
+                event_name: 'ds_coverage_v1',
+                event_type: 13,
+                json_data: {
+                    platform: 'web',
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    userType,
+                    component: result.component,
+                    type: 'nonDs',
+                    pixels: readablePixelCountsByComponentType.nonDsComponent,
+                },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'rebrand',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'rebrandComponent',
-                    pixelCounts,
-                }),
+            {
+                event_name: 'ds_coverage_v1',
+                event_type: 13,
+                json_data: {
+                    platform: 'web',
+                    // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
+                    team: result.team,
+                    userType,
+                    component: result.component,
+                    type: 'unknown',
+                    pixels: readablePixelCountsByComponentType.unknownDsComponent,
+                },
             },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'nonDs',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'nonDsComponent',
-                    pixelCounts,
-                }),
-            },
-        },
-        {
-            event_name: 'ds_coverage_v1',
-            event_type: 13,
-            param1: 'write_disable',
-            json_data: {
-                platform: 'web',
-                team: result.team,
-                userType,
-                component: result.component,
-                type: 'unknown',
-                pixels: getPixelCountByComponentType({
-                    componentType: 'unknownDsComponent',
-                    pixelCounts,
-                }),
-            },
-        },
-    ];
+        ];
 
-    return events.map<DWHEvent>(event => ({
-        event_name: event.event_name,
-        event_type: event.event_type,
-        param1: 'param1' in event ? event.param1 : undefined,
-        json_data: JSON.stringify(event.json_data),
-    }));
-};
+        return events.map<DWHEvent>(event => ({
+            event_name: event.event_name,
+            event_type: event.event_type,
+            param1: 'param1' in event ? event.param1 : undefined,
+            json_data: JSON.stringify(event.json_data),
+        }));
+    };
 
 export function generateDsCoverageAllContainersRuntimeInfo(totalDuration: Milliseconds): DWHEvent {
     const event: DsCoverageAllContainersRuntimeInfo = {
@@ -335,7 +288,7 @@ export function generateDsCoverageWarning({
     userType,
 }: {
     userType: UserType;
-    result: DsVisualCoverageDeNormalizedResult;
+    result: PreplyDsVisualCoverageDeNormalizedResult;
 }): DWHDsCoverageWarningEvent {
     const { team } = result;
 
@@ -343,7 +296,7 @@ export function generateDsCoverageWarning({
         event_name: 'ds_coverage_runtime_warning',
         event_type: 13,
         json_data: {
-            // @ts-expect-error The DS coverage APIs don't support the team types the proper way
+            // @ts-expect-error Team types should be automatically passed as generics through the DS coverage APIs
             team,
             userType,
             platform: 'web',

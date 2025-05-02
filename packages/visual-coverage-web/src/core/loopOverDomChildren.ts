@@ -1,10 +1,14 @@
-import type { ChildData, Logger, Milliseconds } from '@preply/ds-visual-coverage-core';
-import { createRect, getComponentType } from '@preply/ds-visual-coverage-core';
+import type {
+    Logger,
+    ChildData,
+    Milliseconds,
+    GetComponentData,
+    DsVisualCoverageError,
+} from '@preply/ds-visual-coverage-core';
+import { createRect } from '@preply/ds-visual-coverage-core';
 
-import { hasCoverageContainerAttribute } from '../coverageContainer/hasCoverageContainerAttribute';
-import { DsVisualCoverageError } from '../debug/DsVisualCoverageError';
 import type { IdleDeadline, RequestIdleCallback } from '../support/getRequestIdleCallback';
-import type { OnError } from '../types';
+import type { CoverageContainerDataAttribute, OnError } from '../types';
 import { createPromise } from '../utils/createPromise';
 
 import { singleStepTimeout } from './constants';
@@ -14,15 +18,18 @@ type LoopParams = {
     onError: OnError;
     domElement: Element;
     deadline: IdleDeadline;
+    coverageContainerData: ChildData;
     requestIdleCallbackFunc: RequestIdleCallback;
     stopVisualCoverageCalculation: () => boolean;
     onComplete: (loopOverDomChildrenResult: LoopOverDomChildrenResult) => void;
+    coverageContainersDataAttribute: CoverageContainerDataAttribute | undefined;
+    getComponentData: GetComponentData<Element>;
 
     // Must NOT be passed externally
     recursiveParams?: {
         loops: Array<LoopData>;
+        parentsData: ChildData[];
         mutableChildrenData: ChildData[];
-        isChildOfUiDsComponent: boolean;
     };
 };
 
@@ -52,12 +59,15 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
         deadline,
         domElement,
         onComplete,
+        getComponentData,
+        coverageContainerData,
         requestIdleCallbackFunc,
         stopVisualCoverageCalculation,
-        recursiveParams: { mutableChildrenData, isChildOfUiDsComponent, loops } = {
+        coverageContainersDataAttribute,
+        recursiveParams: { mutableChildrenData, loops, parentsData } = {
             loops: [{ i: 0 }],
             mutableChildrenData: [],
-            isChildOfUiDsComponent: false,
+            parentsData: [coverageContainerData],
         },
     } = params;
 
@@ -80,7 +90,7 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
 
     for (let { i } = currentLoop; i < domElement.children.length; i++) {
         if (deadline.timeRemaining() <= 0) {
-            logger('⏳ Waiting idle');
+            logger.log('⏳ Waiting idle');
             requestIdleCallbackFunc((nextCallbackDeadline: IdleDeadline) => {
                 if (stopVisualCoverageCalculation()) {
                     onComplete({
@@ -96,14 +106,17 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
                     onError,
                     domElement,
                     onComplete,
+                    getComponentData,
+                    coverageContainerData,
                     requestIdleCallbackFunc,
                     stopVisualCoverageCalculation,
                     deadline: nextCallbackDeadline,
+                    coverageContainersDataAttribute,
 
                     recursiveParams: {
                         loops,
+                        parentsData,
                         mutableChildrenData,
-                        isChildOfUiDsComponent,
                     },
                 });
             });
@@ -116,28 +129,8 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
             if (!child) throw new Error(`No child at ${i} (this should be a TS-only protection)`);
             if (child.nodeType !== Node.ELEMENT_NODE) continue;
 
-            // Because of the asynchronous nature of the algorithm, DOM elements can be removed
-            // while the algorithm is running. The final count could be less precise, but cancelling the
-            // calculation would mean tracking no events for pages with frequent changes. And given
-            // the fact that less calculation events will make the page less important in the final
-            // coverage averages, it's better to have an imprecise result compared to no result at all.
-            if (!globalThis.document.contains(child)) continue;
-
             // Stop when encounter other containers.
-            if (hasCoverageContainerAttribute(child)) continue;
-
-            if (child.tagName === 'iframe') continue;
-
-            const computedStyle = globalThis.getComputedStyle(child);
-            const isInvisible =
-                computedStyle.display === 'none' ||
-                computedStyle.opacity === '0' ||
-                computedStyle.visibility === 'hidden';
-            if (isInvisible) continue;
-
-            const dsComponentAttribute = child.getAttribute('data-preply-ds-component');
-            const dsComponentType = getComponentType(dsComponentAttribute);
-            const isUiDsComponent = dsComponentType === 'uiDsComponent';
+            if (child.matches(`[${coverageContainersDataAttribute}]`)) continue;
 
             const scrollingFulRect = child.getBoundingClientRect();
             const scrollingFreeRect = {
@@ -147,35 +140,48 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
                 left: scrollingFulRect.left + globalThis.scrollX,
             };
 
-            let startTagWithAttributes = 'unableToParseTag';
-            const splitHtml = child.outerHTML.split('>');
-            if (splitHtml.length > 0) startTagWithAttributes = child.outerHTML.split('>')[0] + '>';
+            const rect = createRect(scrollingFreeRect);
 
-            mutableChildrenData.push({
-                dsComponentType,
-                isChildOfUiDsComponent,
-                dsComponentName: dsComponentType === 'nonDsComponent' ? null : dsComponentAttribute,
-                rect: createRect(scrollingFreeRect),
-                componentData: startTagWithAttributes,
+            const getComponentDataResult = getComponentData({
+                component: child,
+                parentsData,
             });
+
+            if (getComponentDataResult.result === 'ignoreComponent') continue;
+
+            const { weight, dsComponentName, debugInfo, debugColor } = getComponentDataResult;
+            const childData: ChildData = {
+                rect,
+                weight,
+                debugInfo,
+                debugColor,
+                dsComponentName,
+            };
+
+            mutableChildrenData.push(childData);
 
             if (child.tagName === 'svg') continue;
 
             loops.push({ i: 0 });
+            parentsData.push(childData);
             nonBlockingLoopOverDomChildren({
                 logger,
                 onError,
                 deadline,
                 onComplete,
+                getComponentData,
                 domElement: child,
+                coverageContainerData,
                 requestIdleCallbackFunc,
                 stopVisualCoverageCalculation,
+                coverageContainersDataAttribute,
                 recursiveParams: {
                     loops,
+                    parentsData,
                     mutableChildrenData,
-                    isChildOfUiDsComponent: isUiDsComponent || isChildOfUiDsComponent,
                 },
             });
+            parentsData.pop();
         } catch (e) {
             onError(e as DsVisualCoverageError);
         }
@@ -195,12 +201,23 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
 type Params = {
     logger: Logger;
     domElement: Element;
+    coverageContainerData: ChildData;
+    getComponentData: GetComponentData<Element>;
     requestIdleCallbackFunc: RequestIdleCallback;
     stopVisualCoverageCalculation: () => boolean;
+    coverageContainersDataAttribute: CoverageContainerDataAttribute | undefined;
 };
 
 export function loopOverDomChildren(params: Params): Promise<LoopOverDomChildrenResult> {
-    const { logger, domElement, requestIdleCallbackFunc, stopVisualCoverageCalculation } = params;
+    const {
+        logger,
+        domElement,
+        getComponentData,
+        coverageContainerData,
+        requestIdleCallbackFunc,
+        stopVisualCoverageCalculation,
+        coverageContainersDataAttribute,
+    } = params;
     const { promise, resolver, rejecter } = createPromise<LoopOverDomChildrenResult>();
     let resolved = false;
     let stopped = false;
@@ -289,9 +306,12 @@ export function loopOverDomChildren(params: Params): Promise<LoopOverDomChildren
             logger,
             deadline,
             domElement,
+            getComponentData,
+            coverageContainerData,
             requestIdleCallbackFunc,
             onError: rejectPromise,
             onComplete: resolvePromise,
+            coverageContainersDataAttribute,
             stopVisualCoverageCalculation: internalStopVisualCoverageCalculation,
         });
     });

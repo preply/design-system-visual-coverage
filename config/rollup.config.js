@@ -1,4 +1,5 @@
 const glob = require('fast-glob');
+const { defineConfig } = require('rollup');
 const peerDepsExternal = require('rollup-plugin-peer-deps-external');
 const renameNodeModules = require('@pixi/rollup-plugin-rename-node-modules');
 const typescript = require('rollup-plugin-typescript2');
@@ -15,8 +16,9 @@ const sources = glob.sync(['src/**/*.{ts,tsx,less}', '!**/*.test.{ts,tsx}', '!**
 const isProd = process.env.NODE_ENV === 'production';
 const generateScopedName = isProd ? '[hash:base64:6]' : '[local]__[hash:base64:5]';
 
-const config = {
+const config = defineConfig({
     input: sources,
+    external: [/^@radix-ui/],
     output: [
         {
             format: 'es',
@@ -50,10 +52,10 @@ const config = {
         }),
         cssModules(),
         copy({
-            targets: [{ src: 'src/**/*.{less,scss,png}', dest: 'dist/' }],
+            targets: [{ src: 'src/**/*.{less,scss,png,svg}', dest: 'dist/' }],
             flatten: false,
         }),
     ],
-};
+});
 
 module.exports = config;
