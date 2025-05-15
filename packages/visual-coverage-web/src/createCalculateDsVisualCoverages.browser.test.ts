@@ -293,7 +293,7 @@ describe('createCalculateDsVisualCoverages', () => {
             // --------------------------------------------------
             // ARRANGE
             const { cleanup, rootElement } = createPage({
-                id: 'root4',
+                id: 'root5',
                 html: `
                 <div>
                     <div style="width:0;" ${coverageContainerDomAttribute}='containerWithNoSize'>
@@ -333,11 +333,45 @@ describe('createCalculateDsVisualCoverages', () => {
             cleanup();
         });
 
+        test('When the container is the rootElement, should count the coverage and get the results', async () => {
+            // --------------------------------------------------
+            // ARRANGE
+            const { cleanup, rootElement } = createPage({
+                id: 'root6',
+                html: DSHeadingStub,
+            });
+            const coverageContainerComponent = 'MainApp';
+            rootElement.setAttribute(coverageContainerDomAttribute, coverageContainerComponent); // Coverage container
+
+            // --------------------------------------------------
+            // ACT
+            const onCompleteMock = await calculateCoverage({ rootElement });
+
+            // --------------------------------------------------
+            // ASSERT
+            if (!onCompleteMock.mock.calls[0]) {
+                throw new Error(
+                    'onCompleteMock.mock.calls[0] is undefined (this should be a TS-only protection)',
+                );
+            }
+            const call = onCompleteMock.mock.calls[0][0];
+
+            const results = call.dsVisualCoverageResults;
+            const firstResult = results[0];
+            if (!firstResult)
+                throw new Error('firstResult is undefined (this should be a TS-only protection)');
+            expect(firstResult.coverageContainerAttributeValue).toContain(
+                coverageContainerComponent,
+            );
+
+            cleanup();
+        });
+
         test('When there is an icon from the DS, should count it', async () => {
             // --------------------------------------------------
             // ARRANGE
             const { cleanup, rootElement } = createPage({
-                id: 'root4',
+                id: 'root7',
                 html: `
                     <div ${coverageContainerDomAttribute}='{"component":"App","team":"design_system"}'>
                          <svg data-ds-component="SvgTokyoUIIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -372,7 +406,7 @@ describe('createCalculateDsVisualCoverages', () => {
             // --------------------------------------------------
             // ARRANGE
             const { cleanup, rootElement } = createPage({
-                id: 'root4',
+                id: 'root8',
                 html: `
                     <div ${coverageContainerDomAttribute}='{"component":"App","team":"design_system"}'>
                          <svg data-ds-component="SvgTokyoUIIllustration" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -408,7 +442,7 @@ describe('createCalculateDsVisualCoverages', () => {
             // --------------------------------------------------
             // ARRANGE
             const { cleanup, rootElement } = createPage({
-                id: 'root4',
+                id: 'root9',
                 html: `
                     <div ${coverageContainerDomAttribute}='{"component":"App","team":"design_system"}'>
                          ${NonDSButtonStub} <!-- Necessary otherwise the container is discarded because it's considered empty -->

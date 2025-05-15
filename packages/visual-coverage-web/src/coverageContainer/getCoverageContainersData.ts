@@ -20,8 +20,14 @@ export function getCoverageContainersData(params: Params): Return {
     const result: Return = [];
 
     const coverageContainers = coverageContainersDataAttribute
-        ? rootElement.querySelectorAll(`[${coverageContainersDataAttribute}]`)
+        ? Array.from(rootElement.querySelectorAll(`[${coverageContainersDataAttribute}]`))
         : [rootElement];
+
+    const rootElementIsCoverageContainer =
+        coverageContainersDataAttribute &&
+        rootElement.hasAttribute(coverageContainersDataAttribute);
+
+    if (rootElementIsCoverageContainer) coverageContainers.unshift(rootElement);
 
     logger.log(`Found ${coverageContainers.length} coverage containers`);
 
