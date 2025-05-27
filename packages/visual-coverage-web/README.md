@@ -1,20 +1,10 @@
-# `@preply/ds-visual-coverage-web`
+## `@preply/ds-visual-coverage-web`
 
-Please read [`@preply/ds-visual-coverage-core`'s README first](../visual-coverage-core/README.md).
-
-All the Web-specific utilities to calculate the Design System visual coverage.
+This package contains all the web-specific utilities to calculate the Design System visual coverage.
 
 The calculation uses `requestIdleCallback`, Web Workers, and typed arrays to be run in production without affecting the users' UX. You can read more about the performance optimizations on [Preply's Engineering blog: The Implementation Details of Preply’s Design System Visual Coverage (part II)](https://medium.com/preply-engineering/the-implementation-details-of-preplys-design-system-visual-coverage-86b4a78ad2bb).
 
----
-
-## Why, what, and how
-
-The tutorial that follows allows you to play with the Visual Coverage in less than an hour, and to go from zero to hero in less than a day (compared to the months Preply dedicated to refine this project, battle-test it in production, etc.) when it comes to measure the impact of the Design System on your Product.
-
-If you're new to the project, we suggest you reading the two extensive articles we published on Preply's engineering blog that explain the why, what and how of the project: [Visual coverage: Why and How Preply Measures the Impact of the Design System (part I)](https://medium.com/preply-engineering/visual-coverage-why-and-how-preply-measures-the-impact-of-the-design-system-1057115f4aff), and [The Implementation Details of Preply’s Design System Visual Coverage (part II)](https://medium.com/preply-engineering/the-implementation-details-of-preplys-design-system-visual-coverage-86b4a78ad2bb).
-
-## Tutorial
+# Tutorial
 
 ## Step 1: Exposing `createCalculateDsVisualCoverages` for quick iterations
 
@@ -397,7 +387,3 @@ const splitHtml = component.outerHTML.split('>');
 if (splitHtml.length > 0) startTagWithAttributes = component.outerHTML.split('>')[0] + '>';
 const debugInfo = startTagWithAttributes;
 ```
-
-<!-- ask justine for a review
-also matte, also the PM who got inspired and made it for her company
-ask the ones who spoke wwith at the jsday + marco liberati -->
