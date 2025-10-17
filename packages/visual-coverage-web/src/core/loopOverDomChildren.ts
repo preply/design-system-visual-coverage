@@ -30,6 +30,7 @@ type LoopParams = {
         loops: Array<LoopData>;
         parentsData: ChildData[];
         mutableChildrenData: ChildData[];
+        pendingCallbackIds: Set<number>;
     };
 };
 
@@ -64,10 +65,11 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
         requestIdleCallbackFunc,
         stopVisualCoverageCalculation,
         coverageContainersDataAttribute,
-        recursiveParams: { mutableChildrenData, loops, parentsData } = {
+        recursiveParams: { mutableChildrenData, loops, parentsData, pendingCallbackIds } = {
             loops: [{ i: 0 }],
             mutableChildrenData: [],
             parentsData: [coverageContainerData],
+            pendingCallbackIds: new Set<number>(),
         },
     } = params;
 
@@ -91,7 +93,9 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
     for (let { i } = currentLoop; i < domElement.children.length; i++) {
         if (deadline.timeRemaining() <= 0) {
             logger.log('⏳ Waiting idle');
-            requestIdleCallbackFunc((nextCallbackDeadline: IdleDeadline) => {
+            const callbackId = requestIdleCallbackFunc((nextCallbackDeadline: IdleDeadline) => {
+                pendingCallbackIds.delete(callbackId);
+
                 if (stopVisualCoverageCalculation()) {
                     onComplete({
                         stopped: true,
@@ -117,9 +121,11 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
                         loops,
                         parentsData,
                         mutableChildrenData,
+                        pendingCallbackIds,
                     },
                 });
             });
+            pendingCallbackIds.add(callbackId);
             return;
         }
 
@@ -179,6 +185,7 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
                     loops,
                     parentsData,
                     mutableChildrenData,
+                    pendingCallbackIds,
                 },
             });
             parentsData.pop();
@@ -188,6 +195,11 @@ function nonBlockingLoopOverDomChildren(params: LoopParams): void {
     }
 
     if (isRootLoop) {
+        // Cancel all pending idle callbacks to prevent race conditions
+        pendingCallbackIds.forEach(callbackId => {
+            globalThis.cancelIdleCallback(callbackId);
+        });
+
         onComplete({
             stopped: false,
             childrenData: mutableChildrenData,
