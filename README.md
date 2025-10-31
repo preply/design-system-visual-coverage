@@ -1,12 +1,6 @@
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./assets/logo-inverted.svg">
-  <source media="(prefers-color-scheme: light)" srcset="./assets/logo.svg">
-  <img width="450px" alt="Blade Design System Logo" src="./assets/blade-original.min.svg">
-</picture>
-</p>
-
 # Preply Design System Visual Coverage
+
+![Preply's dashboard the the DS coverage in action on preply.com](./assets/hero-image.jpg)
 
 > [!NOTE]
 > As promised during the recent talks: with the April/May 2025 update, the core and Web libraries are now Preply-agnostic, and we rewrote the docs and tutorials accordingly.
@@ -16,7 +10,7 @@ This repository contains the implementation of Preply's design system Visual Cov
 > _You may have heard of the project:_
 >
 > - _At the [Into Design Systems conference](https://www.intodesignsystems.com/): here you can find [the article they wrote about it](https://intodesignsystems.substack.com/p/measuring-design-system-impact-lessons), and [the resources we shared](https://www.figma.com/community/file/1509535015145685735/design-system-visual-coverage-resources))._
-> - _At the [JSDay](https://www.jsday.it/) conference: here is [the talk description](<https://www.jsday.it/talks_speakers/#DesignSystemVisualCoverageInWebAndApp(ReactNative)Applications>), and the [slides](https://cef62.github.io/design-system-coverage-jsday-2025)._
+> - _At the [JSDay](https://www.jsday.it/) conference: here is [the talk description](<https://www.jsday.it/talks_speakers/#DesignSystemVisualCoverageInWebAndApp(ReactNative)Applications>), the [recording](https://www.youtube.com/watch?v=xy3mRyXDMHo), and the [slides](https://cef62.github.io/design-system-coverage-jsday-2025)._
 > - _At one of [Belka](https://www.belkadigital.com/)’s AMA: here is [the recording](https://www.youtube.com/watch?v=Kw_eGDppG4M) (in Italian)._
 > - _At one of the [Commit to Growth](https://podcasts.apple.com/it/podcast/commit-to-growth/id1788326535)’s episodes: here is [the recording](https://podcasts.apple.com/us/podcast/lessons-from-large-codebases-design-visual-coverage/id1788326535?i=1000688799413). The podcast is curated by one of Preply’s engineers: [Yasemin çidem](https://medium.com/u/754df0a2b156?source=post_page---user_mention--1057115f4aff---------------------------------------)._
 
